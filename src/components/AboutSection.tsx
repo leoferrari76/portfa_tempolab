@@ -87,21 +87,6 @@ const AboutSection = ({
                 ))}
               </div>
             </div>
-            <div className="space-y-4">
-              <h2 className="text-2xl font-semibold">Educação</h2>
-              <div className="space-y-2 text-sm">
-                <div>
-                  <p className="font-medium">Pós-graduação em Design Gráfico</p>
-                  <p className="text-muted-foreground">SENAC (2011 – 2012)</p>
-                </div>
-                <div>
-                  <p className="font-medium">Publicidade e Propaganda</p>
-                  <p className="text-muted-foreground">
-                    PUC Campinas (1996 – 2000)
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </div>
       </div>
