@@ -65,7 +65,6 @@ const Home = () => {
           </button>
         </div>
       </header>
-
       <main className="container py-8 space-y-16">
         {/* Hero Section */}
         <motion.section
@@ -106,9 +105,6 @@ const Home = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
           >
-            <h2 className="text-3xl font-bold tracking-tight mb-8">
-              Sobre mim
-            </h2>
             <AboutSection />
           </motion.div>
         </section>
@@ -204,7 +200,6 @@ const Home = () => {
           </motion.div>
         </section>
       </main>
-
       <footer className="border-t bg-muted/40">
         <div className="container py-8 md:py-12 flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center gap-2 mb-4 md:mb-0">

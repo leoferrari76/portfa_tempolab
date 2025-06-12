@@ -35,12 +35,12 @@ const AboutSection = ({
   location = "Campinas – SP",
 }: AboutSectionProps) => {
   return (
-    <section className="w-full py-12 md:py-24 bg-background">
+    <section className="w-full md:py-24 bg-background py-0">
       <div className="container px-4 md:px-6">
         <div className="flex flex-col md:flex-row gap-8 items-center">
           {/* Speaker Image */}
-          <div className="w-full md:w-1/2 flex justify-center md:justify-end">
-            <div className="relative w-full max-w-md aspect-[3/4] rounded-lg overflow-hidden shadow-xl">
+          <div className="w-full flex justify-center md:justify-end md:w-1/2">
+            <div className="relative w-full aspect-[3/4] rounded-lg overflow-hidden container">
               <img
                 src={speakerImage}
                 alt={`${name} speaking at an event`}
@@ -62,7 +62,6 @@ const AboutSection = ({
                 <span>📱 {phone}</span>
               </div>
             </div>
-
             <div className="space-y-4">
               <h2 className="text-2xl font-semibold">Sobre mim</h2>
               <p className="text-muted-foreground leading-relaxed">{bio}</p>
@@ -73,7 +72,6 @@ const AboutSection = ({
                 e acelerar a entrega de valor em produtos digitais.
               </p>
             </div>
-
             <div className="space-y-4">
               <h2 className="text-2xl font-semibold">
                 Ferramentas & Expertise
@@ -89,7 +87,6 @@ const AboutSection = ({
                 ))}
               </div>
             </div>
-
             <div className="space-y-4">
               <h2 className="text-2xl font-semibold">Educação</h2>
               <div className="space-y-2 text-sm">
@@ -104,27 +101,6 @@ const AboutSection = ({
                   </p>
                 </div>
               </div>
-            </div>
-
-            <div className="pt-4">
-              <Card>
-                <CardContent className="p-4 flex items-center gap-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage
-                      src="https://api.dicebear.com/7.x/avataaars/svg?seed=LeoFerrari"
-                      alt="LF Design Logo"
-                    />
-                    <AvatarFallback>LF</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">Vamos conversar!</p>
-                    <p className="text-sm text-muted-foreground">
-                      {contactEmail}
-                    </p>
-                    <p className="text-sm text-muted-foreground">{phone}</p>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </div>
