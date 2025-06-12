@@ -10,6 +10,7 @@ import {
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
+import { Plus, Trash2 } from "lucide-react";
 
 interface Project {
   id: string;
@@ -29,28 +30,53 @@ const FreelanceGallery = ({
   projects = defaultProjects,
 }: FreelanceGalleryProps) => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [projectsList, setProjectsList] = useState<Project[]>(projects);
 
   const categories = [
     "all",
-    ...Array.from(new Set(projects.map((project) => project.category))),
+    ...Array.from(new Set(projectsList.map((project) => project.category))),
   ];
 
   const filteredProjects =
     selectedCategory === "all"
-      ? projects
-      : projects.filter((project) => project.category === selectedCategory);
+      ? projectsList
+      : projectsList.filter((project) => project.category === selectedCategory);
+
+  const addNewProject = () => {
+    const newProject: Project = {
+      id: `project-${Date.now()}`,
+      title: "Novo Projeto",
+      description: "Descrição do novo projeto freelance",
+      image:
+        "https://images.unsplash.com/photo-1498050108023-c5249f4df085?w=800&q=80",
+      category: "web",
+      technologies: ["React", "TypeScript", "Tailwind CSS"],
+    };
+
+    setProjectsList((prev) => [...prev, newProject]);
+  };
+
+  const deleteProject = (projectId: string) => {
+    setProjectsList((prev) => prev.filter((p) => p.id !== projectId));
+  };
 
   return (
     <div className="w-full bg-background py-12 px-4 md:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl font-bold tracking-tight mb-2">
-            Freelance Projects
+            Projetos Freelance
           </h2>
           <p className="text-muted-foreground max-w-2xl mx-auto">
-            A collection of my independent work across various industries and
-            technologies.
+            Uma coleção dos meus trabalhos independentes em várias indústrias e
+            tecnologias.
           </p>
+          <div className="flex justify-center mt-6">
+            <Button onClick={addNewProject} className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Adicionar Projeto
+            </Button>
+          </div>
         </div>
 
         <Tabs defaultValue="all" className="w-full">
@@ -98,9 +124,17 @@ const FreelanceGallery = ({
                       ))}
                     </div>
                   </CardContent>
-                  <CardFooter>
-                    <Button variant="outline" className="w-full">
-                      View Details
+                  <CardFooter className="flex gap-2">
+                    <Button variant="outline" className="flex-1">
+                      Ver Detalhes
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => deleteProject(project.id)}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </CardFooter>
                 </Card>

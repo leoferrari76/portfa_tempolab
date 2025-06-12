@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Plus, Trash2 } from "lucide-react";
 
 interface Technology {
   name: string;
@@ -170,9 +170,46 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
   companies = defaultCompanies,
 }) => {
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
+  const [companiesList, setCompaniesList] = useState<Company[]>(companies);
 
   const toggleProjectExpansion = (projectId: string) => {
     setExpandedProject(expandedProject === projectId ? null : projectId);
+  };
+
+  const addNewProject = (companyId: string) => {
+    const newProject: Project = {
+      id: `project-${Date.now()}`,
+      title: "Novo Projeto",
+      description: "Descrição do novo projeto",
+      role: "Função",
+      duration: "6 meses",
+      technologies: [
+        { name: "React", color: "default" },
+        { name: "TypeScript", color: "secondary" },
+      ],
+      achievements: ["Resultado alcançado 1", "Resultado alcançado 2"],
+    };
+
+    setCompaniesList((prev) =>
+      prev.map((company) =>
+        company.id === companyId
+          ? { ...company, projects: [...company.projects, newProject] }
+          : company,
+      ),
+    );
+  };
+
+  const deleteProject = (companyId: string, projectId: string) => {
+    setCompaniesList((prev) =>
+      prev.map((company) =>
+        company.id === companyId
+          ? {
+              ...company,
+              projects: company.projects.filter((p) => p.id !== projectId),
+            }
+          : company,
+      ),
+    );
   };
 
   return (
@@ -188,7 +225,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
         </p>
 
         <Accordion type="single" collapsible className="w-full">
-          {companies.map((company) => (
+          {companiesList.map((company) => (
             <AccordionItem key={company.id} value={company.id}>
               <AccordionTrigger className="hover:bg-muted/50 px-4 rounded-md">
                 <div className="flex flex-col sm:flex-row sm:items-center w-full text-left">
@@ -201,6 +238,17 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
               <AccordionContent className="px-4">
                 <div className="mb-6">
                   <p className="text-muted-foreground">{company.description}</p>
+                </div>
+
+                <div className="flex justify-end mb-4">
+                  <Button
+                    onClick={() => addNewProject(company.id)}
+                    className="flex items-center gap-2"
+                    size="sm"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Adicionar Projeto
+                  </Button>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -247,7 +295,16 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                           ))}
                         </div>
                       </CardContent>
-                      <CardFooter className="flex justify-end border-t bg-muted/20 pt-3">
+                      <CardFooter className="flex justify-between border-t bg-muted/20 pt-3">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteProject(company.id, project.id)}
+                          className="text-xs flex items-center gap-1 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Deletar
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -255,8 +312,8 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                           className="text-xs flex items-center gap-1"
                         >
                           {expandedProject === project.id
-                            ? "Show Less"
-                            : "Show More"}
+                            ? "Mostrar Menos"
+                            : "Mostrar Mais"}
                           <ChevronRight
                             className={`h-4 w-4 transition-transform ${expandedProject === project.id ? "rotate-90" : ""}`}
                           />
