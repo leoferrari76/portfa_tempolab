@@ -10,7 +10,8 @@ import {
 import { Button } from "./ui/button";
 import { Badge } from "./ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, ExternalLink } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface Project {
   id: string;
@@ -31,6 +32,7 @@ const FreelanceGallery = ({
 }: FreelanceGalleryProps) => {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [projectsList, setProjectsList] = useState<Project[]>(projects);
+  const navigate = useNavigate();
 
   const categories = [
     "all",
@@ -125,7 +127,12 @@ const FreelanceGallery = ({
                     </div>
                   </CardContent>
                   <CardFooter className="flex gap-2">
-                    <Button variant="outline" className="flex-1">
+                    <Button
+                      variant="outline"
+                      className="flex-1 flex items-center gap-2"
+                      onClick={() => navigate(`/project/${project.id}`)}
+                    >
+                      <ExternalLink className="h-4 w-4" />
                       Ver Detalhes
                     </Button>
                     <Button

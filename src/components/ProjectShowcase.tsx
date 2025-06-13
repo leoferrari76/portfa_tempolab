@@ -13,9 +13,28 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ChevronRight, Plus, Trash2, ExternalLink, X } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface Technology {
   name: string;
@@ -171,32 +190,108 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
 }) => {
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
   const [companiesList, setCompaniesList] = useState<Company[]>(companies);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(
+    null,
+  );
+  const [newProjectData, setNewProjectData] = useState({
+    title: "",
+    description: "",
+    role: "",
+    duration: "",
+    technologies: [] as Technology[],
+    achievements: [] as string[],
+  });
+  const [currentTech, setCurrentTech] = useState("");
+  const [currentAchievement, setCurrentAchievement] = useState("");
+  const navigate = useNavigate();
 
   const toggleProjectExpansion = (projectId: string) => {
     setExpandedProject(expandedProject === projectId ? null : projectId);
   };
 
-  const addNewProject = (companyId: string) => {
+  const openModal = (companyId: string) => {
+    setSelectedCompanyId(companyId);
+    setIsModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setSelectedCompanyId(null);
+    setNewProjectData({
+      title: "",
+      description: "",
+      role: "",
+      duration: "",
+      technologies: [],
+      achievements: [],
+    });
+    setCurrentTech("");
+    setCurrentAchievement("");
+  };
+
+  const addTechnology = () => {
+    if (currentTech.trim()) {
+      setNewProjectData((prev) => ({
+        ...prev,
+        technologies: [
+          ...prev.technologies,
+          { name: currentTech.trim(), color: "default" },
+        ],
+      }));
+      setCurrentTech("");
+    }
+  };
+
+  const removeTechnology = (index: number) => {
+    setNewProjectData((prev) => ({
+      ...prev,
+      technologies: prev.technologies.filter((_, i) => i !== index),
+    }));
+  };
+
+  const addAchievement = () => {
+    if (currentAchievement.trim()) {
+      setNewProjectData((prev) => ({
+        ...prev,
+        achievements: [...prev.achievements, currentAchievement.trim()],
+      }));
+      setCurrentAchievement("");
+    }
+  };
+
+  const removeAchievement = (index: number) => {
+    setNewProjectData((prev) => ({
+      ...prev,
+      achievements: prev.achievements.filter((_, i) => i !== index),
+    }));
+  };
+
+  const saveProject = () => {
+    if (!selectedCompanyId || !newProjectData.title.trim()) return;
+
     const newProject: Project = {
       id: `project-${Date.now()}`,
-      title: "Novo Projeto",
-      description: "Descrição do novo projeto",
-      role: "Função",
-      duration: "6 meses",
-      technologies: [
-        { name: "React", color: "default" },
-        { name: "TypeScript", color: "secondary" },
-      ],
-      achievements: ["Resultado alcançado 1", "Resultado alcançado 2"],
+      title: newProjectData.title,
+      description: newProjectData.description,
+      role: newProjectData.role,
+      duration: newProjectData.duration,
+      technologies: newProjectData.technologies,
+      achievements:
+        newProjectData.achievements.length > 0
+          ? newProjectData.achievements
+          : undefined,
     };
 
     setCompaniesList((prev) =>
       prev.map((company) =>
-        company.id === companyId
+        company.id === selectedCompanyId
           ? { ...company, projects: [...company.projects, newProject] }
           : company,
       ),
     );
+
+    closeModal();
   };
 
   const deleteProject = (companyId: string, projectId: string) => {
@@ -242,7 +337,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
 
                 <div className="flex justify-end mb-4">
                   <Button
-                    onClick={() => addNewProject(company.id)}
+                    onClick={() => openModal(company.id)}
                     className="flex items-center gap-2"
                     size="sm"
                   >
@@ -296,15 +391,28 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                         </div>
                       </CardContent>
                       <CardFooter className="flex justify-between border-t bg-muted/20 pt-3">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteProject(company.id, project.id)}
-                          className="text-xs flex items-center gap-1 text-destructive hover:text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Deletar
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() =>
+                              deleteProject(company.id, project.id)
+                            }
+                            className="text-xs flex items-center gap-1 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Deletar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/project/${project.id}`)}
+                            className="text-xs flex items-center gap-1"
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                            Ver Detalhes
+                          </Button>
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -326,6 +434,164 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
             </AccordionItem>
           ))}
         </Accordion>
+
+        {/* Modal for adding new project */}
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>Adicionar Novo Projeto</DialogTitle>
+              <DialogDescription>
+                Preencha os dados do novo projeto para a empresa selecionada.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="title">Título do Projeto *</Label>
+                <Input
+                  id="title"
+                  value={newProjectData.title}
+                  onChange={(e) =>
+                    setNewProjectData((prev) => ({
+                      ...prev,
+                      title: e.target.value,
+                    }))
+                  }
+                  placeholder="Ex: Sistema de CRM Empresarial"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição</Label>
+                <Textarea
+                  id="description"
+                  value={newProjectData.description}
+                  onChange={(e) =>
+                    setNewProjectData((prev) => ({
+                      ...prev,
+                      description: e.target.value,
+                    }))
+                  }
+                  placeholder="Descreva o projeto e seus objetivos..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="role">Sua Função</Label>
+                  <Input
+                    id="role"
+                    value={newProjectData.role}
+                    onChange={(e) =>
+                      setNewProjectData((prev) => ({
+                        ...prev,
+                        role: e.target.value,
+                      }))
+                    }
+                    placeholder="Ex: Tech Lead, Desenvolvedor"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="duration">Duração</Label>
+                  <Input
+                    id="duration"
+                    value={newProjectData.duration}
+                    onChange={(e) =>
+                      setNewProjectData((prev) => ({
+                        ...prev,
+                        duration: e.target.value,
+                      }))
+                    }
+                    placeholder="Ex: 6 meses, 1 ano"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Tecnologias</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={currentTech}
+                    onChange={(e) => setCurrentTech(e.target.value)}
+                    placeholder="Ex: React, Node.js"
+                    onKeyPress={(e) => e.key === "Enter" && addTechnology()}
+                  />
+                  <Button type="button" onClick={addTechnology} size="sm">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {newProjectData.technologies.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {newProjectData.technologies.map((tech, index) => (
+                      <Badge
+                        key={index}
+                        variant="secondary"
+                        className="flex items-center gap-1"
+                      >
+                        {tech.name}
+                        <button
+                          type="button"
+                          onClick={() => removeTechnology(index)}
+                          className="ml-1 hover:text-destructive"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Principais Resultados</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={currentAchievement}
+                    onChange={(e) => setCurrentAchievement(e.target.value)}
+                    placeholder="Ex: Reduziu custos em 30%"
+                    onKeyPress={(e) => e.key === "Enter" && addAchievement()}
+                  />
+                  <Button type="button" onClick={addAchievement} size="sm">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {newProjectData.achievements.length > 0 && (
+                  <div className="space-y-1 mt-2">
+                    {newProjectData.achievements.map((achievement, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center justify-between bg-muted p-2 rounded text-sm"
+                      >
+                        <span>{achievement}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeAchievement(index)}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={closeModal}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={saveProject}
+                disabled={!newProjectData.title.trim()}
+              >
+                Salvar Projeto
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </section>
   );

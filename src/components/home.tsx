@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { Separator } from "./ui/separator";
 import AboutSection from "./AboutSection";
 import ProjectShowcase from "./ProjectShowcase";
-import FreelanceGallery from "./FreelanceGallery";
 
 const Home = () => {
   return (
@@ -12,11 +11,11 @@ const Home = () => {
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="h-10 w-10 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">
-                LF
-              </span>
-            </div>
+            <img
+              src="/logo_lf.png"
+              alt="Leonardo Ferrari Logo"
+              className="h-10 w-auto"
+            />
             <span className="text-xl font-bold">Leonardo Ferrari</span>
           </div>
           <nav className="hidden md:flex items-center gap-6">
@@ -32,12 +31,7 @@ const Home = () => {
             >
               Projetos
             </a>
-            <a
-              href="#freelance"
-              className="text-sm font-medium hover:text-primary transition-colors"
-            >
-              Experiência
-            </a>
+
             <a
               href="#contact"
               className="text-sm font-medium hover:text-primary transition-colors"
@@ -128,23 +122,6 @@ const Home = () => {
 
         <Separator />
 
-        {/* Freelance Gallery */}
-        <section id="freelance" className="py-8">
-          <motion.div
-            initial={{ opacity: 0 }}
-            whileInView={{ opacity: 1 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-3xl font-bold tracking-tight mb-8">
-              Experiência Profissional
-            </h2>
-            <FreelanceGallery />
-          </motion.div>
-        </section>
-
-        <Separator />
-
         {/* Contact Section */}
         <section id="contact" className="py-8">
           <motion.div
@@ -203,11 +180,11 @@ const Home = () => {
       <footer className="border-t bg-muted/40">
         <div className="container py-8 md:py-12 flex flex-col md:flex-row justify-between items-center">
           <div className="flex items-center gap-2 mb-4 md:mb-0">
-            <div className="h-8 w-8 bg-primary rounded-full flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">
-                LF
-              </span>
-            </div>
+            <img
+              src="/logo_lf.png"
+              alt="Leonardo Ferrari Logo"
+              className="h-8 w-auto"
+            />
             <span className="text-sm font-medium">
               © 2024 Leonardo Ferrari. Todos os direitos reservados.
             </span>
