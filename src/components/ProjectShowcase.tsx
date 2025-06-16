@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 import {
   Card,
@@ -36,13 +36,12 @@ import {
   X,
   Upload,
   Image as ImageIcon,
+  User,
+  Clock,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-
-interface Technology {
-  name: string;
-  color?: "default" | "secondary" | "destructive" | "outline";
-}
+import { supabase } from "@/lib/supabaseClient";
+import { useAuth } from "@/context/AuthContext";
 
 interface ContentBlock {
   id: string;
@@ -51,13 +50,12 @@ interface ContentBlock {
 }
 
 interface Project {
-  id: string;
+  id?: string;
   title: string;
   description: string;
   contentBlocks?: ContentBlock[];
   role: string;
   duration: string;
-  technologies: Technology[];
   achievements?: string[];
 }
 
@@ -73,53 +71,7 @@ interface ProjectShowcaseProps {
   companies?: Company[];
 }
 
-const defaultCompanies: Company[] = [
-  {
-    id: "company-1",
-    name: "Tech Innovations Consulting",
-    period: "2020 - 2022",
-    description:
-      "Led multiple digital transformation projects for enterprise clients.",
-    projects: [
-      {
-        id: "project-1-1",
-        title: "Enterprise CRM Implementation",
-        description:
-          "Implemented a custom CRM solution for a Fortune 500 company.",
-        role: "Technical Lead",
-        duration: "8 months",
-        technologies: [
-          { name: "React", color: "default" },
-          { name: "Node.js", color: "secondary" },
-          { name: "MongoDB", color: "outline" },
-        ],
-        achievements: [
-          "Reduced customer response time by 45%",
-          "Integrated with 5 legacy systems",
-          "Implemented automated reporting system",
-        ],
-      },
-      {
-        id: "project-1-2",
-        title: "Supply Chain Optimization Platform",
-        description:
-          "Developed a supply chain analytics and optimization platform.",
-        role: "Solution Architect",
-        duration: "10 months",
-        technologies: [
-          { name: "Python", color: "default" },
-          { name: "TensorFlow", color: "destructive" },
-          { name: "AWS", color: "secondary" },
-        ],
-        achievements: [
-          "Reduced inventory costs by 23%",
-          "Improved delivery time accuracy by 34%",
-          "Implemented predictive analytics for demand forecasting",
-        ],
-      },
-    ],
-  },
-];
+const defaultCompanies: Company[] = [];
 
 const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
   companies = defaultCompanies,
@@ -136,13 +88,39 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
     contentBlocks: [] as ContentBlock[],
     role: "",
     duration: "",
-    technologies: [] as Technology[],
     achievements: [] as string[],
   });
-  const [currentTech, setCurrentTech] = useState("");
   const [currentAchievement, setCurrentAchievement] = useState("");
   const [currentTextBlock, setCurrentTextBlock] = useState("");
   const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Efeito para carregar projetos do Supabase na montagem do componente
+  useEffect(() => {
+    const fetchProjects = async () => {
+      const { data, error } = await supabase.from('projects').select('*');
+
+      if (error) {
+        console.error("Erro ao carregar projetos do Supabase:", error);
+        return;
+      }
+
+      if (data) {
+        // Agrupar projetos em uma empresa padrão ou em empresas existentes
+        // Para simplificar, vou colocar todos os projetos em uma única empresa 'Meus Projetos'
+        const companyId = "my-projects-company";
+        const myProjectsCompany: Company = {
+          id: companyId,
+          name: "Meus Projetos",
+          period: "",
+          description: "",
+          projects: data as Project[],
+        };
+        setCompaniesList([myProjectsCompany]);
+      }
+    };
+    fetchProjects();
+  }, []);
 
   const toggleProjectExpansion = (projectId: string) => {
     setExpandedProject(expandedProject === projectId ? null : projectId);
@@ -162,32 +140,10 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
       contentBlocks: [],
       role: "",
       duration: "",
-      technologies: [],
       achievements: [],
     });
-    setCurrentTech("");
     setCurrentAchievement("");
     setCurrentTextBlock("");
-  };
-
-  const addTechnology = () => {
-    if (currentTech.trim()) {
-      setNewProjectData((prev) => ({
-        ...prev,
-        technologies: [
-          ...prev.technologies,
-          { name: currentTech.trim(), color: "default" },
-        ],
-      }));
-      setCurrentTech("");
-    }
-  };
-
-  const removeTechnology = (index: number) => {
-    setNewProjectData((prev) => ({
-      ...prev,
-      technologies: prev.technologies.filter((_, i) => i !== index),
-    }));
   };
 
   const addAchievement = () => {
@@ -210,7 +166,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
   const addTextBlock = () => {
     if (currentTextBlock.trim()) {
       const newBlock: ContentBlock = {
-        id: `block-${Date.now()}`,
+        id: `block-\${Date.now()}`,
         type: "text",
         content: currentTextBlock.trim(),
       };
@@ -225,7 +181,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
   const addImageBlock = (imageUrl: string) => {
     if (imageUrl.trim()) {
       const newBlock: ContentBlock = {
-        id: `block-${Date.now()}`,
+        id: `block-\${Date.now()}`,
         type: "image",
         content: imageUrl.trim(),
       };
@@ -255,11 +211,10 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
     }
   };
 
-  const saveProject = () => {
+  const saveProject = async () => {
     if (!selectedCompanyId || !newProjectData.title.trim()) return;
 
-    const newProject: Project = {
-      id: `project-${Date.now()}`,
+    const newProject: Omit<Project, 'id'> = {
       title: newProjectData.title,
       description: newProjectData.description,
       contentBlocks:
@@ -268,17 +223,26 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
           : undefined,
       role: newProjectData.role,
       duration: newProjectData.duration,
-      technologies: newProjectData.technologies,
       achievements:
         newProjectData.achievements.length > 0
           ? newProjectData.achievements
           : undefined,
     };
 
+    const { data, error } = await supabase.from('projects').insert([newProject]).select();
+
+    if (error) {
+      console.error("Erro ao salvar o projeto no Supabase:", error);
+      alert("Erro ao salvar o projeto. Por favor, tente novamente.");
+      return;
+    }
+
+    const savedProject = data[0]; // O Supabase retorna um array com o item inserido
+
     setCompaniesList((prev) =>
       prev.map((company) =>
         company.id === selectedCompanyId
-          ? { ...company, projects: [...company.projects, newProject] }
+          ? { ...company, projects: [...company.projects, savedProject] }
           : company,
       ),
     );
@@ -286,7 +250,17 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
     closeModal();
   };
 
-  const deleteProject = (companyId: string, projectId: string) => {
+  const deleteProject = async (companyId: string, projectId: string) => {
+    // Deletar do Supabase
+    const { error } = await supabase.from('projects').delete().eq('id', projectId);
+
+    if (error) {
+      console.error("Erro ao deletar o projeto do Supabase:", error);
+      alert("Erro ao deletar o projeto. Por favor, tente novamente.");
+      return;
+    }
+
+    // Atualizar o estado local
     setCompaniesList((prev) =>
       prev.map((company) =>
         company.id === companyId
@@ -302,151 +276,143 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
   return (
     <section className="w-full py-12 bg-background" id="projects">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold mb-8 text-center">
-          Consulting Experience
-        </h2>
-        <p className="text-muted-foreground text-center mb-12 max-w-2xl mx-auto">
-          Throughout my career, I've had the opportunity to work with various
-          consulting firms, helping clients solve complex technical challenges
-          and implement innovative solutions.
-        </p>
+        {user && (
+          <div className="flex justify-center mb-6">
+            <Button
+              onClick={() => {
+                // Se não houver empresas, adicione uma empresa padrão temporária
+                if (companiesList.length === 0) {
+                  const newCompanyId = `company-${Date.now()}`;
+                  setCompaniesList([
+                    {
+                      id: newCompanyId,
+                      name: "Meus Projetos",
+                      period: "",
+                      description: "",
+                      projects: [],
+                    },
+                  ]);
+                  setSelectedCompanyId(newCompanyId);
+                } else {
+                  setSelectedCompanyId(companiesList[0].id); // Seleciona a primeira empresa existente
+                }
+                setIsModalOpen(true);
+              }}
+              className="flex items-center gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Adicionar Projeto
+            </Button>
+          </div>
+        )}
 
         <div className="space-y-12">
-          {companiesList.map((company) => (
-            <div key={company.id} className="space-y-6">
-              <div className="text-center space-y-2">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2">
-                  <h3 className="text-2xl font-bold">{company.name}</h3>
-                  <span className="text-muted-foreground text-lg">
-                    {company.period}
-                  </span>
+          {companiesList.length === 0 ? (
+            <p className="text-center text-muted-foreground">Nenhum projeto adicionado ainda. Clique em "Adicionar Projeto" para começar!</p>
+          ) : (
+            companiesList.map((company) => (
+              <div key={company.id} className="space-y-6">
+                <div className="text-center space-y-2">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2">
+                    <h3 className="text-2xl font-bold">{company.name}</h3>
+                    <span className="text-muted-foreground text-lg">
+                      {company.period}
+                    </span>
+                  </div>
+                  <p className="text-muted-foreground max-w-2xl mx-auto">
+                    {company.description}
+                  </p>
                 </div>
-                <p className="text-muted-foreground max-w-2xl mx-auto">
-                  {company.description}
-                </p>
-              </div>
 
-              <div className="flex justify-center mb-6">
-                <Button
-                  onClick={() => openModal(company.id)}
-                  className="flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Adicionar Projeto
-                </Button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {company.projects.map((project) => (
-                  <Card
-                    key={project.id}
-                    className="overflow-hidden border border-muted hover:shadow-lg transition-shadow"
-                  >
-                    <CardHeader>
-                      <CardTitle className="text-lg">{project.title}</CardTitle>
-                      <CardDescription className="flex items-center gap-2">
-                        <span className="font-medium">{project.role}</span>
-                        <span className="text-xs text-muted-foreground">
-                          ({project.duration})
-                        </span>
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="mb-4 text-sm">{project.description}</p>
-
-                      {expandedProject === project.id &&
-                        project.contentBlocks && (
-                          <div className="mt-4 space-y-4">
-                            <h4 className="font-medium mb-2 text-sm">
-                              Conteúdo Detalhado:
-                            </h4>
-                            {project.contentBlocks.map((block) => (
-                              <div key={block.id}>
-                                {block.type === "text" ? (
-                                  <p className="text-xs leading-relaxed">
-                                    {block.content}
-                                  </p>
-                                ) : (
-                                  <div className="flex justify-center">
-                                    <img
-                                      src={block.content}
-                                      alt="Project content"
-                                      className="max-w-full h-auto rounded-lg shadow-sm border"
-                                      style={{ maxHeight: "200px" }}
-                                    />
-                                  </div>
-                                )}
-                              </div>
-                            ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {company.projects.map((project) => (
+                    <Card key={project.id}>
+                      <CardHeader>
+                        <CardTitle>{project.title}</CardTitle>
+                        <CardDescription>
+                          {project.description}
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {project.contentBlocks &&
+                          project.contentBlocks.map((block, index) => (
+                            <div key={block.id || index} className="mb-2 last:mb-0">
+                              {block.type === "text" ? (
+                                <p className="text-sm text-muted-foreground">
+                                  {block.content}
+                                </p>
+                              ) : (
+                                <img
+                                  src={block.content}
+                                  alt="Project content image"
+                                  className="w-full h-auto rounded-md object-cover"
+                                />
+                              )}
+                            </div>
+                          ))}
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
+                          <div className="flex items-center gap-1">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span>{project.role}</span>
                           </div>
-                        )}
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                            <span>{project.duration}</span>
+                          </div>
+                        </div>
 
-                      {expandedProject === project.id &&
-                        project.achievements && (
-                          <div className="mt-4">
-                            <h4 className="font-medium mb-2 text-sm">
-                              Key Achievements:
-                            </h4>
-                            <ul className="list-disc pl-4 space-y-1">
-                              {project.achievements.map(
+                        {expandedProject === project.id && (
+                          <div className="mt-4 space-y-2">
+                            <h4 className="font-semibold text-sm mb-2">Principais Resultados</h4>
+                            <ul className="list-disc list-inside text-muted-foreground space-y-2">
+                              {project.achievements?.map(
                                 (achievement, index) => (
-                                  <li key={index} className="text-xs">
-                                    {achievement}
-                                  </li>
+                                  <li key={index}>{achievement}</li>
                                 ),
                               )}
                             </ul>
                           </div>
                         )}
-
-                      <div className="flex flex-wrap gap-1 mt-4">
-                        {project.technologies.map((tech, index) => (
-                          <Badge
-                            key={index}
-                            variant={tech.color}
-                            className="text-xs"
+                      </CardContent>
+                      <CardFooter className="flex justify-between border-t bg-muted/20 pt-3">
+                        <div className="flex gap-1">
+                          {user && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => deleteProject(company.id, project.id as string)}
+                              className="text-xs flex items-center gap-1 text-destructive hover:text-destructive p-1"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => navigate(`/project/${project.id}`)}
+                            className="text-xs flex items-center gap-1 p-1"
                           >
-                            {tech.name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-between border-t bg-muted/20 pt-3">
-                      <div className="flex gap-1">
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </div>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => deleteProject(company.id, project.id)}
-                          className="text-xs flex items-center gap-1 text-destructive hover:text-destructive p-1"
+                          onClick={() => toggleProjectExpansion(project.id)}
+                          className="text-xs flex items-center gap-1"
                         >
-                          <Trash2 className="h-3 w-3" />
+                          {expandedProject === project.id ? "Menos" : "Mais"}
+                          <ChevronRight
+                            className={`h-3 w-3 transition-transform ${expandedProject === project.id ? "rotate-90" : ""}`}
+                          />
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/project/${project.id}`)}
-                          className="text-xs flex items-center gap-1 p-1"
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                        </Button>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => toggleProjectExpansion(project.id)}
-                        className="text-xs flex items-center gap-1"
-                      >
-                        {expandedProject === project.id ? "Menos" : "Mais"}
-                        <ChevronRight
-                          className={`h-3 w-3 transition-transform ${expandedProject === project.id ? "rotate-90" : ""}`}
-                        />
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         {/* Modal for adding new project */}
@@ -524,41 +490,6 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
               </div>
 
               <div className="space-y-2">
-                <Label>Tecnologias</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={currentTech}
-                    onChange={(e) => setCurrentTech(e.target.value)}
-                    placeholder="Ex: React, Node.js"
-                    onKeyPress={(e) => e.key === "Enter" && addTechnology()}
-                  />
-                  <Button type="button" onClick={addTechnology} size="sm">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                {newProjectData.technologies.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-2">
-                    {newProjectData.technologies.map((tech, index) => (
-                      <Badge
-                        key={index}
-                        variant="secondary"
-                        className="flex items-center gap-1"
-                      >
-                        {tech.name}
-                        <button
-                          type="button"
-                          onClick={() => removeTechnology(index)}
-                          className="ml-1 hover:text-destructive"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2">
                 <Label>Conteúdo Detalhado (Texto e Imagens)</Label>
                 <div className="space-y-3">
                   <div className="flex gap-2">
@@ -594,50 +525,34 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                       Adicionar Imagem
                     </Label>
                   </div>
-                </div>
-
-                {newProjectData.contentBlocks.length > 0 && (
-                  <div className="space-y-2 mt-4 max-h-60 overflow-y-auto">
-                    <h4 className="text-sm font-medium">Blocos de Conteúdo:</h4>
-                    {newProjectData.contentBlocks.map((block, index) => (
-                      <div
-                        key={block.id}
-                        className="flex items-start justify-between bg-muted p-3 rounded text-sm gap-2"
-                      >
-                        <div className="flex items-start gap-2 flex-1">
-                          {block.type === "text" ? (
-                            <div className="flex items-start gap-2">
-                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium">
-                                TEXTO
-                              </span>
-                              <p className="text-xs leading-relaxed flex-1">
-                                {block.content}
-                              </p>
-                            </div>
-                          ) : (
-                            <div className="flex items-start gap-2">
-                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-medium">
-                                IMAGEM
-                              </span>
-                              <img
-                                src={block.content}
-                                alt={`Content block ${index + 1}`}
-                                className="w-16 h-16 object-cover rounded border"
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => removeContentBlock(block.id)}
-                          className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                  {newProjectData.contentBlocks.length > 0 && (
+                    <div className="space-y-2 mt-2">
+                      {newProjectData.contentBlocks.map((block) => (
+                        <div
+                          key={block.id}
+                          className="flex items-center justify-between bg-muted p-2 rounded text-sm"
                         >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                          {block.type === "text" ? (
+                            <span>{block.content}</span>
+                          ) : (
+                            <img
+                              src={block.content}
+                              alt="Content preview"
+                              className="h-12 w-12 object-cover rounded"
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => removeContentBlock(block.id)}
+                            className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                          >
+                            <X className="h-4 w-4" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
 
               <div className="space-y-2">

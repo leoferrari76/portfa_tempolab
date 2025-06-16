@@ -10,14 +10,6 @@ const Home = () => {
       {/* Header with Navigation */}
       <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="container flex h-16 items-center justify-between">
-          <div className="flex items-center gap-2">
-            <img
-              src="/logo_lf.png"
-              alt="Leonardo Ferrari Logo"
-              className="h-10 w-auto"
-            />
-            <span className="text-xl font-bold">Leonardo Ferrari</span>
-          </div>
           <nav className="hidden md:flex items-center gap-6">
             <a
               href="#about"
@@ -67,26 +59,20 @@ const Home = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
+          <img
+            src="/logo_lf.png"
+            alt="Leonardo Ferrari Logo"
+            className="h-20 w-auto mb-4"
+          />
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight mb-4">
-            Leonardo Ferrari
+            Leo Ferrari
           </h1>
-          <p className="text-xl md:text-2xl text-muted-foreground max-w-[700px] mb-8">
-            UX Designer Sênior | Estratégia, operação e execução ponta-a-ponta
+          <p className="text-xl md:text-5xl text-muted-foreground max-w-[700px] mb-8">
+            - Designer
+            </p>
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-[700px] mb-8">
+            Criando experiências digitais que conectam pessoas e marcas através do design intencional e inovador.
           </p>
-          <div className="flex gap-4">
-            <a
-              href="#contact"
-              className="inline-flex items-center justify-center rounded-md bg-primary text-primary-foreground h-10 px-4 py-2 text-sm font-medium transition-colors hover:bg-primary/90"
-            >
-              Entre em Contato
-            </a>
-            <a
-              href="#projects"
-              className="inline-flex items-center justify-center rounded-md border border-input bg-background h-10 px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
-            >
-              Ver Projetos
-            </a>
-          </div>
         </motion.section>
 
         <Separator />
@@ -114,7 +100,7 @@ const Home = () => {
             transition={{ duration: 0.6 }}
           >
             <h2 className="text-3xl font-bold tracking-tight mb-8">
-              Projetos de Consultoria
+              Projetos
             </h2>
             <ProjectShowcase />
           </motion.div>

@@ -1,155 +1,120 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, User, Clock } from "lucide-react";
+import { ArrowLeft, Calendar, User, Clock, X, Plus, Upload } from "lucide-react";
+import { supabase } from "@/lib/supabaseClient";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/context/AuthContext";
 
-interface ProjectDetailProps {
-  projectId?: string;
+interface ContentBlock {
+  id: string;
+  type: "text" | "image";
+  content: string;
 }
 
-const ProjectDetail: React.FC<ProjectDetailProps> = ({ projectId }) => {
-  const { id } = useParams();
-  const navigate = useNavigate();
-  const currentProjectId = projectId || id;
+interface Project {
+  id?: string;
+  title: string;
+  description: string;
+  contentBlocks?: ContentBlock[];
+  role: string;
+  duration: string;
+  achievements?: string[];
+}
 
-  // Mock project data - in a real app, this would come from an API or database
-  const projectData = {
-    "project-1-1": {
-      title: "Enterprise CRM Implementation",
-      company: "Tech Innovations Consulting",
-      role: "Technical Lead",
-      duration: "8 months",
-      period: "2021 - 2022",
-      description:
-        "Implementação de uma solução CRM personalizada para uma empresa Fortune 500, focando em melhorar a eficiência do atendimento ao cliente e integração com sistemas legados.",
-      technologies: ["React", "Node.js", "MongoDB", "AWS", "Docker"],
-      images: [
-        "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=800&q=80",
-        "https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=800&q=80",
-        "https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=800&q=80",
-      ],
-      sections: [
-        {
-          title: "Desafio",
-          content:
-            "A empresa enfrentava dificuldades significativas no gerenciamento de relacionamento com clientes devido a sistemas fragmentados e processos manuais ineficientes. O tempo de resposta ao cliente estava acima da média do setor, impactando a satisfação e retenção.",
-        },
-        {
-          title: "Solução Implementada",
-          content:
-            "Desenvolvemos uma solução CRM completa e integrada que centralizou todas as informações dos clientes em uma única plataforma. A solução incluiu automação de processos, dashboards em tempo real e integração com 5 sistemas legados existentes.",
-        },
-        {
-          title: "Tecnologias Utilizadas",
-          content:
-            "Utilizamos React para o frontend, garantindo uma interface moderna e responsiva. O backend foi desenvolvido em Node.js com MongoDB para flexibilidade de dados. A infraestrutura foi implementada na AWS com containerização Docker para escalabilidade.",
-        },
-        {
-          title: "Resultados Alcançados",
-          content:
-            "A implementação resultou em uma redução de 45% no tempo de resposta ao cliente, integração bem-sucedida com 5 sistemas legados e implementação de um sistema de relatórios automatizado que economiza 20 horas semanais da equipe.",
-        },
-      ],
-      achievements: [
-        "Redução de 45% no tempo de resposta ao cliente",
-        "Integração com 5 sistemas legados",
-        "Sistema de relatórios automatizado",
-        "Melhoria de 60% na satisfação do cliente",
-        "Economia de 20 horas semanais da equipe",
-      ],
-    },
-    "project-1-2": {
-      title: "Supply Chain Optimization Platform",
-      company: "Tech Innovations Consulting",
-      role: "Solution Architect",
-      duration: "10 months",
-      period: "2020 - 2021",
-      description:
-        "Desenvolvimento de uma plataforma de análise e otimização da cadeia de suprimentos utilizando machine learning para previsão de demanda e otimização de inventário.",
-      technologies: ["Python", "TensorFlow", "AWS", "PostgreSQL", "Docker"],
-      images: [
-        "https://images.unsplash.com/photo-1586528116311-ad8dd3c8310d?w=800&q=80",
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800&q=80",
-        "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=800&q=80",
-      ],
-      sections: [
-        {
-          title: "Contexto do Projeto",
-          content:
-            "A empresa cliente enfrentava desafios significativos na gestão de sua cadeia de suprimentos, com altos custos de inventário e baixa precisão nas previsões de demanda. Era necessária uma solução que utilizasse dados históricos para otimizar processos.",
-        },
-        {
-          title: "Arquitetura da Solução",
-          content:
-            "Projetamos uma arquitetura robusta utilizando microserviços em Python, com modelos de machine learning em TensorFlow para análise preditiva. A plataforma foi hospedada na AWS com alta disponibilidade e escalabilidade automática.",
-        },
-        {
-          title: "Implementação de IA",
-          content:
-            "Desenvolvemos algoritmos de machine learning personalizados para previsão de demanda, utilizando dados históricos de vendas, sazonalidade e fatores externos. Os modelos foram treinados com TensorFlow e otimizados para precisão máxima.",
-        },
-        {
-          title: "Impacto nos Negócios",
-          content:
-            "A plataforma gerou economia significativa nos custos de inventário e melhorou drasticamente a precisão das entregas. O sistema de análise preditiva permitiu à empresa antecipar tendências de mercado e ajustar estratégias proativamente.",
-        },
-      ],
-      achievements: [
-        "Redução de 23% nos custos de inventário",
-        "Melhoria de 34% na precisão do tempo de entrega",
-        "Implementação de análise preditiva para previsão de demanda",
-        "Automação de 80% dos processos de reposição",
-        "ROI de 300% no primeiro ano",
-      ],
-    },
-    "1": {
-      title: "E-commerce Platform",
-      company: "Projeto Freelance",
-      role: "Full Stack Developer",
-      duration: "6 meses",
-      period: "2023",
-      description:
-        "Desenvolvimento completo de uma plataforma de e-commerce responsiva com catálogo de produtos, carrinho de compras e integração de pagamentos.",
-      technologies: ["React", "Node.js", "MongoDB", "Stripe", "AWS"],
-      images: [
-        "https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&q=80",
-        "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&q=80",
-        "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=800&q=80",
-      ],
-      sections: [
-        {
-          title: "Visão Geral do Projeto",
-          content:
-            "Desenvolvimento de uma plataforma de e-commerce completa para um cliente do setor de moda. O projeto incluiu desde o design da interface até a implementação do backend, sistema de pagamentos e deploy em produção.",
-        },
-        {
-          title: "Funcionalidades Principais",
-          content:
-            "A plataforma conta com catálogo de produtos com filtros avançados, carrinho de compras persistente, sistema de checkout seguro, painel administrativo para gestão de produtos e pedidos, e sistema de notificações por email.",
-        },
-        {
-          title: "Integração de Pagamentos",
-          content:
-            "Implementamos integração completa com Stripe para processamento seguro de pagamentos, incluindo suporte a múltiplos métodos de pagamento, webhooks para confirmação de transações e sistema de reembolsos automatizado.",
-        },
-        {
-          title: "Performance e Segurança",
-          content:
-            "A aplicação foi otimizada para performance com lazy loading, cache inteligente e CDN. Implementamos medidas de segurança robustas incluindo autenticação JWT, validação de dados e proteção contra ataques comuns.",
-        },
-      ],
-      achievements: [
-        "Plataforma totalmente responsiva",
-        "Integração segura com Stripe",
-        "Painel administrativo completo",
-        "Performance otimizada (< 3s loading)",
-        "Sistema de notificações automatizado",
-      ],
-    },
+const ProjectDetail: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [editProjectData, setEditProjectData] = useState<Omit<Project, 'id'> | null>(null);
+  const { user } = useAuth();
+
+  const fetchProject = async () => {
+    setLoading(true);
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    const { data, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) {
+      console.error("Erro ao carregar o projeto:", error);
+      setLoading(false);
+      return;
+    }
+
+    if (data) {
+      setProject(data as Project);
+      setEditProjectData(data as Omit<Project, 'id'>); // Preenche os dados para edição
+    }
+    setLoading(false);
   };
 
-  const project = projectData[currentProjectId as keyof typeof projectData];
+  useEffect(() => {
+    fetchProject();
+  }, [id]);
+
+  const openEditModal = () => {
+    if (project) {
+      setEditProjectData({
+        title: project.title,
+        description: project.description,
+        contentBlocks: project.contentBlocks || [],
+        role: project.role,
+        duration: project.duration,
+        achievements: project.achievements || [],
+      });
+      setIsEditModalOpen(true);
+    }
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditProjectData(null);
+  };
+
+  const handleUpdateProject = async () => {
+    if (!id || !editProjectData || !editProjectData.title.trim()) return;
+
+    const { error } = await supabase
+      .from('projects')
+      .update(editProjectData)
+      .eq('id', id);
+
+    if (error) {
+      console.error("Erro ao atualizar o projeto:", error);
+      alert("Erro ao atualizar o projeto. Por favor, tente novamente.");
+      return;
+    }
+
+    alert("Projeto atualizado com sucesso!");
+    closeEditModal();
+    fetchProject(); // Recarrega os dados para exibir as alterações
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p>Carregando projeto...</p>
+      </div>
+    );
+  }
 
   if (!project) {
     return (
@@ -200,7 +165,7 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projectId }) => {
               <h1 className="text-4xl font-bold tracking-tight mb-2">
                 {project.title}
               </h1>
-              <p className="text-xl text-muted-foreground">{project.company}</p>
+              <p className="text-xl text-muted-foreground">{project.description}</p>
             </div>
             <div className="flex flex-col gap-2 mt-4 md:mt-0">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -211,85 +176,237 @@ const ProjectDetail: React.FC<ProjectDetailProps> = ({ projectId }) => {
                 <Clock className="h-4 w-4" />
                 {project.duration}
               </div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                {project.period}
-              </div>
             </div>
           </div>
 
           <p className="text-lg leading-relaxed mb-6">{project.description}</p>
 
-          <div className="flex flex-wrap gap-2">
-            {project.technologies.map((tech, index) => (
-              <Badge key={index} variant="secondary">
-                {tech}
-              </Badge>
-            ))}
-          </div>
+          {user && (
+            <div className="flex justify-end mb-4">
+              <Button onClick={openEditModal} className="flex items-center gap-2">
+                Editar Projeto
+              </Button>
+            </div>
+          )}
         </div>
 
-        {/* Project Images */}
+        {/* Project Content Blocks */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Galeria do Projeto</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {project.images.map((image, index) => (
-              <div
-                key={index}
-                className="aspect-video overflow-hidden rounded-lg"
-              >
-                <img
-                  src={image}
-                  alt={`${project.title} - Imagem ${index + 1}`}
-                  className="w-full h-full object-cover transition-transform hover:scale-105"
-                />
+          <h2 className="text-2xl font-bold mb-6">Conteúdo do Projeto</h2>
+          <div className="space-y-6">
+            {project.contentBlocks?.map((block, index) => (
+              <div key={block.id || index} className="flex flex-col items-center">
+                {block.type === "text" ? (
+                  <p className="text-muted-foreground text-center max-w-2xl mx-auto">
+                    {block.content}
+                  </p>
+                ) : (
+                  <img
+                    src={block.content}
+                    alt={`Conteúdo do projeto ${index + 1}`}
+                    className="w-full max-w-xl h-auto rounded-lg object-cover shadow-lg"
+                  />
+                )}
               </div>
             ))}
           </div>
         </div>
 
-        {/* Project Sections */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Detalhes do Projeto</h2>
-          <div className="space-y-8">
-            {project.sections.map((section, index) => (
-              <div key={index} className="bg-card p-6 rounded-lg border">
-                <h3 className="text-xl font-semibold mb-4">{section.title}</h3>
-                <p className="text-muted-foreground leading-relaxed">
-                  {section.content}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Achievements */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Principais Conquistas</h2>
-          <div className="bg-card p-6 rounded-lg border">
-            <ul className="space-y-3">
+        {/* Key Achievements */}
+        {project.achievements && project.achievements.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold mb-6">Principais Resultados</h2>
+            <ul className="list-disc list-inside text-muted-foreground space-y-2">
               {project.achievements.map((achievement, index) => (
-                <li key={index} className="flex items-start gap-3">
-                  <div className="w-2 h-2 bg-primary rounded-full mt-2 flex-shrink-0" />
-                  <span className="text-muted-foreground">{achievement}</span>
-                </li>
+                <li key={index}>{achievement}</li>
               ))}
             </ul>
           </div>
-        </div>
-
-        {/* Back Button */}
-        <div className="text-center">
-          <Button
-            onClick={() => navigate("/")}
-            size="lg"
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Voltar ao Portfólio
-          </Button>
-        </div>
+        )}
       </main>
+
+      {/* Edit Project Modal */}
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Projeto</DialogTitle>
+          </DialogHeader>
+
+          {editProjectData && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-title">Título do Projeto *</Label>
+                <Input
+                  id="edit-title"
+                  value={editProjectData.title}
+                  onChange={(e) =>
+                    setEditProjectData((prev) =>
+                      prev ? { ...prev, title: e.target.value } : null,
+                    )
+                  }
+                  placeholder="Título do Projeto"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Descrição</Label>
+                <Textarea
+                  id="edit-description"
+                  value={editProjectData.description}
+                  onChange={(e) =>
+                    setEditProjectData((prev) =>
+                      prev ? { ...prev, description: e.target.value } : null,
+                    )
+                  }
+                  placeholder="Descrição do projeto..."
+                  rows={3}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-role">Sua Função</Label>
+                  <Input
+                    id="edit-role"
+                    value={editProjectData.role}
+                    onChange={(e) =>
+                      setEditProjectData((prev) =>
+                        prev ? { ...prev, role: e.target.value } : null,
+                      )
+                    }
+                    placeholder="Ex: Tech Lead"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-duration">Duração</Label>
+                  <Input
+                    id="edit-duration"
+                    value={editProjectData.duration}
+                    onChange={(e) =>
+                      setEditProjectData((prev) =>
+                        prev ? { ...prev, duration: e.target.value } : null,
+                      )
+                    }
+                    placeholder="Ex: 6 meses"
+                  />
+                </div>
+              </div>
+
+              {/* Content Blocks (similar logic as ProjectShowcase for adding/removing) */}
+              <div className="space-y-2">
+                <Label>Conteúdo Detalhado (Texto e Imagens)</Label>
+                {/* Simplified for brevity, usually involves state for currentTextBlock/Image */}
+                {/* Add logic here to display and edit existing contentBlocks, and add new ones */}
+                {/* For example, by mapping editProjectData.contentBlocks */}
+
+                {editProjectData.contentBlocks && editProjectData.contentBlocks.length > 0 && (
+                  <div className="space-y-2 mt-2">
+                    {editProjectData.contentBlocks.map((block, index) => (
+                      <div key={block.id || index} className="flex items-center justify-between bg-muted p-2 rounded text-sm">
+                        {block.type === "text" ? (
+                          <span>{block.content}</span>
+                        ) : (
+                          <img src={block.content} alt="Content preview" className="h-12 w-12 object-cover rounded" />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setEditProjectData(prev => prev ? { ...prev, contentBlocks: prev.contentBlocks?.filter(b => b.id !== block.id) } : null)}
+                          className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {/* Add new text block input */}
+                <div className="flex gap-2">
+                  <Textarea
+                    placeholder="Adicione um bloco de texto..."
+                    rows={3}
+                    onChange={(e) => setEditProjectData(prev => prev ? { ...prev, contentBlocks: [...(prev.contentBlocks || []), { id: `block-${Date.now()}`, type: "text", content: e.target.value }] } : null)}
+                  />
+                  <Button type="button" size="sm" className="self-start">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                {/* Add image block input */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                          const imageUrl = event.target?.result as string;
+                          setEditProjectData(prev => prev ? { ...prev, contentBlocks: [...(prev.contentBlocks || []), { id: `block-${Date.now()}`, type: "image", content: imageUrl }] } : null);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="hidden"
+                    id="edit-image-upload"
+                  />
+                  <Label
+                    htmlFor="edit-image-upload"
+                    className="flex items-center gap-2 cursor-pointer bg-secondary hover:bg-secondary/80 px-3 py-2 rounded-md text-sm"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Adicionar Imagem
+                  </Label>
+                </div>
+              </div>
+
+              {/* Achievements */}
+              <div className="space-y-2">
+                <Label>Principais Resultados</Label>
+                {/* Similar logic as contentBlocks for adding/removing achievements */}
+                {editProjectData.achievements && editProjectData.achievements.length > 0 && (
+                  <div className="space-y-1 mt-2">
+                    {editProjectData.achievements.map((achievement, index) => (
+                      <div key={index} className="flex items-center justify-between bg-muted p-2 rounded text-sm">
+                        <span>{achievement}</span>
+                        <button
+                          type="button"
+                          onClick={() => setEditProjectData(prev => prev ? { ...prev, achievements: prev.achievements?.filter((_, i) => i !== index) } : null)}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Adicione um resultado..."
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      // This is a simplified way; typically you'd manage a temporary input state for new achievement
+                      // For now, it adds directly when changing the input
+                      if (value.trim()) {
+                        setEditProjectData(prev => prev ? { ...prev, achievements: [...(prev.achievements || []), value] } : null);
+                        e.target.value = ""; // Clear input after adding
+                      }
+                    }}
+                  />
+                  <Button type="button" size="sm">
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeEditModal}>Cancelar</Button>
+            <Button onClick={handleUpdateProject} disabled={!editProjectData?.title.trim()}>Salvar Alterações</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
