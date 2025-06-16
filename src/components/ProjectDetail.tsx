@@ -40,6 +40,8 @@ const ProjectDetail: React.FC = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [editProjectData, setEditProjectData] = useState<Omit<Project, 'id'> | null>(null);
   const { user } = useAuth();
+  const [currentEditTextBlock, setCurrentEditTextBlock] = useState("");
+  const [currentEditAchievement, setCurrentEditAchievement] = useState("");
 
   const fetchProject = async () => {
     setLoading(true);
@@ -165,7 +167,6 @@ const ProjectDetail: React.FC = () => {
               <h1 className="text-4xl font-bold tracking-tight mb-2">
                 {project.title}
               </h1>
-              <p className="text-xl text-muted-foreground">{project.description}</p>
             </div>
             <div className="flex flex-col gap-2 mt-4 md:mt-0">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -325,9 +326,20 @@ const ProjectDetail: React.FC = () => {
                   <Textarea
                     placeholder="Adicione um bloco de texto..."
                     rows={3}
-                    onChange={(e) => setEditProjectData(prev => prev ? { ...prev, contentBlocks: [...(prev.contentBlocks || []), { id: `block-${Date.now()}`, type: "text", content: e.target.value }] } : null)}
+                    value={currentEditTextBlock}
+                    onChange={(e) => setCurrentEditTextBlock(e.target.value)}
                   />
-                  <Button type="button" size="sm" className="self-start">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="self-start"
+                    onClick={() => {
+                      if (currentEditTextBlock.trim()) {
+                        setEditProjectData(prev => prev ? { ...prev, contentBlocks: [...(prev.contentBlocks || []), { id: `block-${Date.now()}`, type: "text", content: currentEditTextBlock.trim() }] } : null);
+                        setCurrentEditTextBlock(""); // Limpa o campo após adicionar
+                      }
+                    }}
+                  >
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
@@ -383,17 +395,19 @@ const ProjectDetail: React.FC = () => {
                 <div className="flex gap-2">
                   <Input
                     placeholder="Adicione um resultado..."
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      // This is a simplified way; typically you'd manage a temporary input state for new achievement
-                      // For now, it adds directly when changing the input
-                      if (value.trim()) {
-                        setEditProjectData(prev => prev ? { ...prev, achievements: [...(prev.achievements || []), value] } : null);
-                        e.target.value = ""; // Clear input after adding
+                    value={currentEditAchievement}
+                    onChange={(e) => setCurrentEditAchievement(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={() => {
+                      if (currentEditAchievement.trim()) {
+                        setEditProjectData(prev => prev ? { ...prev, achievements: [...(prev.achievements || []), currentEditAchievement.trim()] } : null);
+                        setCurrentEditAchievement(""); // Limpa o campo após adicionar
                       }
                     }}
-                  />
-                  <Button type="button" size="sm">
+                  >
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>

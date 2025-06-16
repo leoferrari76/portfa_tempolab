@@ -220,13 +220,13 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
       contentBlocks:
         newProjectData.contentBlocks.length > 0
           ? newProjectData.contentBlocks
-          : undefined,
+          : [],
       role: newProjectData.role,
       duration: newProjectData.duration,
       achievements:
         newProjectData.achievements.length > 0
           ? newProjectData.achievements
-          : undefined,
+          : [],
     };
 
     const { data, error } = await supabase.from('projects').insert([newProject]).select();
@@ -445,6 +445,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                 <Label htmlFor="description">Descrição</Label>
                 <Textarea
                   id="description"
+                  placeholder="Uma breve descrição do projeto..."
                   value={newProjectData.description}
                   onChange={(e) =>
                     setNewProjectData((prev) => ({
@@ -452,11 +453,97 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                       description: e.target.value,
                     }))
                   }
-                  placeholder="Descreva o projeto e seus objetivos..."
-                  rows={3}
                 />
               </div>
 
+              {/* Content Blocks (Detailed Content) */}
+              <div className="space-y-2">
+                <Label>Conteúdo Detalhado (Texto e Imagens)</Label>
+                {newProjectData.contentBlocks.length > 0 && (
+                  <div className="space-y-2 mt-2">
+                    {newProjectData.contentBlocks.map((block, index) => (
+                      <div key={block.id || index} className="flex items-center justify-between bg-muted p-2 rounded text-sm">
+                        {block.type === "text" ? (
+                          <span>{block.content}</span>
+                        ) : (
+                          <img src={block.content} alt="Content preview" className="h-12 w-12 object-cover rounded" />
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => removeContentBlock(block.id)}
+                          className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Textarea
+                    placeholder="Adicione um bloco de texto..."
+                    rows={3}
+                    value={currentTextBlock}
+                    onChange={(e) => setCurrentTextBlock(e.target.value)}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="self-start"
+                    onClick={addTextBlock}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <Label
+                    htmlFor="image-upload"
+                    className="flex items-center gap-2 cursor-pointer bg-secondary hover:bg-secondary/80 px-3 py-2 rounded-md text-sm"
+                  >
+                    <Upload className="h-4 w-4" />
+                    Adicionar Imagem
+                  </Label>
+                </div>
+              </div>
+              {/* Achievements (Principais Resultados) */}
+              <div className="space-y-2">
+                <Label>Principais Resultados</Label>
+                {newProjectData.achievements.length > 0 && (
+                  <div className="space-y-1 mt-2">
+                    {newProjectData.achievements.map((achievement, index) => (
+                      <div key={index} className="flex items-center justify-between bg-muted p-2 rounded text-sm">
+                        <span>{achievement}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeAchievement(index)}
+                          className="text-muted-foreground hover:text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Adicione um resultado..."
+                    value={currentAchievement}
+                    onChange={(e) => setCurrentAchievement(e.target.value)}
+                  />
+                  <Button type="button" size="sm" onClick={addAchievement}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Role and Duration */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="role">Sua Função</Label>
@@ -487,106 +574,6 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                     placeholder="Ex: 6 meses, 1 ano"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Conteúdo Detalhado (Texto e Imagens)</Label>
-                <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <Textarea
-                      value={currentTextBlock}
-                      onChange={(e) => setCurrentTextBlock(e.target.value)}
-                      placeholder="Adicione um bloco de texto..."
-                      rows={3}
-                    />
-                    <Button
-                      type="button"
-                      onClick={addTextBlock}
-                      size="sm"
-                      className="self-start"
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageUpload}
-                      className="hidden"
-                      id="image-upload"
-                    />
-                    <Label
-                      htmlFor="image-upload"
-                      className="flex items-center gap-2 cursor-pointer bg-secondary hover:bg-secondary/80 px-3 py-2 rounded-md text-sm"
-                    >
-                      <Upload className="h-4 w-4" />
-                      Adicionar Imagem
-                    </Label>
-                  </div>
-                  {newProjectData.contentBlocks.length > 0 && (
-                    <div className="space-y-2 mt-2">
-                      {newProjectData.contentBlocks.map((block) => (
-                        <div
-                          key={block.id}
-                          className="flex items-center justify-between bg-muted p-2 rounded text-sm"
-                        >
-                          {block.type === "text" ? (
-                            <span>{block.content}</span>
-                          ) : (
-                            <img
-                              src={block.content}
-                              alt="Content preview"
-                              className="h-12 w-12 object-cover rounded"
-                            />
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => removeContentBlock(block.id)}
-                            className="text-muted-foreground hover:text-destructive flex-shrink-0"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Principais Resultados</Label>
-                <div className="flex gap-2">
-                  <Input
-                    value={currentAchievement}
-                    onChange={(e) => setCurrentAchievement(e.target.value)}
-                    placeholder="Ex: Reduziu custos em 30%"
-                    onKeyPress={(e) => e.key === "Enter" && addAchievement()}
-                  />
-                  <Button type="button" onClick={addAchievement} size="sm">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                {newProjectData.achievements.length > 0 && (
-                  <div className="space-y-1 mt-2">
-                    {newProjectData.achievements.map((achievement, index) => (
-                      <div
-                        key={index}
-                        className="flex items-center justify-between bg-muted p-2 rounded text-sm"
-                      >
-                        <span>{achievement}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeAchievement(index)}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
 
