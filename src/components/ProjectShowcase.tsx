@@ -424,6 +424,15 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                         </CardContent>
                         <CardFooter className="flex justify-end border-t bg-muted/20 pt-3">
                           <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => deleteProject(company.id, project.id!)}
+                            className="text-xs flex items-center gap-1 mr-2"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            Deletar
+                          </Button>
+                          <Button
                             variant="outline"
                             size="sm"
                             onClick={() => navigate(`/project/${project.id}`)}

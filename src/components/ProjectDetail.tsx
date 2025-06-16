@@ -44,6 +44,8 @@ const ProjectDetail: React.FC = () => {
   const { user } = useAuth();
   const [currentEditTextBlock, setCurrentEditTextBlock] = useState("");
   const [currentEditAchievement, setCurrentEditAchievement] = useState("");
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [currentImageSrc, setCurrentImageSrc] = useState("");
 
   const quillModules = {
     toolbar: [
@@ -145,6 +147,16 @@ const ProjectDetail: React.FC = () => {
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setEditProjectData(null);
+  };
+
+  const openImageModal = (src: string) => {
+    setCurrentImageSrc(src);
+    setShowImageModal(true);
+  };
+
+  const closeImageModal = () => {
+    setShowImageModal(false);
+    setCurrentImageSrc("");
   };
 
   const handleUpdateProject = async () => {
@@ -250,34 +262,42 @@ const ProjectDetail: React.FC = () => {
           )}
         </div>
 
-        {/* Project Content Blocks */}
-        <div className="mb-12">
-          <h2 className="text-2xl font-bold mb-6">Conteúdo do Projeto</h2>
-          <div className="space-y-6">
-            {project.contentBlocks?.map((block, index) => (
-              <div key={block.id || index} className="flex flex-col items-start">
-                {block.type === "text" ? (
-                  <p
-                    className="text-muted-foreground max-w-2xl mx-auto text-left"
-                    dangerouslySetInnerHTML={{ __html: block.content }}
-                  ></p>
-                ) : (
-                  <img
-                    src={block.content}
-                    alt={`Conteúdo do projeto ${index + 1}`}
-                    className="w-full max-w-xl h-auto rounded-lg object-cover shadow-lg"
-                  />
-                )}
-              </div>
-            ))}
+        {/* Conteúdo Detalhado */}
+        {project.contentBlocks && project.contentBlocks.length > 0 && (
+          <div className="mt-12 space-y-8">
+            <h2 className="text-3xl font-bold tracking-tight mb-4">Conteúdo Detalhado</h2>
+            <div
+              className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start"
+              style={{ gridTemplateColumns: '1fr 1fr', gridAutoRows: 'minmax(min-content, max-content)' }}
+            >
+              {project.contentBlocks.map((block) => (
+                <div key={block.id} className="md:col-span-1">
+                  {block.type === "text" ? (
+                    <div
+                      className="text-muted-foreground leading-relaxed"
+                      dangerouslySetInnerHTML={{ __html: block.content }}
+                    />
+                  ) : (
+                    <div className="mb-4">
+                      <img
+                        src={block.content}
+                        alt="Content Image"
+                        className="w-full h-auto max-w-full max-h-96 object-contain rounded-lg cursor-pointer"
+                        onClick={() => openImageModal(block.content)}
+                      />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Key Achievements */}
+        {/* Principais Resultados */}
         {project.achievements && project.achievements.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold mb-6">Principais Resultados</h2>
-            <ul className="list-disc list-inside text-muted-foreground space-y-2">
+          <div className="mt-12">
+            <h2 className="text-3xl font-bold tracking-tight mb-4">Principais Resultados</h2>
+            <ul className="list-disc list-inside text-muted-foreground space-y-2 leading-relaxed">
               {project.achievements.map((achievement, index) => (
                 <li key={index}>{achievement}</li>
               ))}
@@ -452,6 +472,15 @@ const ProjectDetail: React.FC = () => {
             <Button variant="outline" onClick={closeEditModal}>Cancelar</Button>
             <Button onClick={handleUpdateProject} disabled={!editProjectData?.title.trim()}>Salvar Alterações</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Modal */}
+      <Dialog open={showImageModal} onOpenChange={setShowImageModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 flex items-center justify-center">
+          {currentImageSrc && (
+            <img src={currentImageSrc} alt="Visualização da imagem" className="max-w-full max-h-full object-contain" />
+          )}
         </DialogContent>
       </Dialog>
     </div>
