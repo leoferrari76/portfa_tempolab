@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import 'react-quill/dist/quill.snow.css'; // Importa os estilos do Quill
 import ReactQuill from 'react-quill';
+import parse from 'html-react-parser'; // Importa a biblioteca para parsear HTML
 
 import {
   Card,
@@ -383,90 +384,58 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {company.projects.map((project) => (
-                    <Card key={project.id}>
-                      <CardHeader>
-                        <CardTitle>{project.title}</CardTitle>
-                        <CardDescription
-                          dangerouslySetInnerHTML={{ __html: project.description }}
-                        ></CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        {project.contentBlocks &&
-                          project.contentBlocks.map((block, index) => (
-                            <div key={block.id || index} className="mb-2 last:mb-0">
-                              {block.type === "text" ? (
-                                <p className="text-sm text-muted-foreground">
-                                  {block.content}
-                                </p>
-                              ) : (
-                                <img
-                                  src={block.content}
-                                  alt="Project content image"
-                                  className="w-full h-auto rounded-md object-cover"
-                                />
-                              )}
+                  {company.projects.map((project) => {
+                    return (
+                      <Card
+                        key={project.id}
+                        className="overflow-hidden h-full flex flex-col"
+                      >
+                        <CardHeader>
+                          <CardTitle>{project.title}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex-grow">
+                          <div
+                            className="text-sm text-muted-foreground line-clamp-6"
+                            dangerouslySetInnerHTML={{ __html: project.description }}
+                          />
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
+                            <div className="flex items-center gap-1">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                              <span>{project.role}</span>
                             </div>
-                          ))}
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
-                          <div className="flex items-center gap-1">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span>{project.role}</span>
+                            <div className="flex items-center gap-1">
+                              <Clock className="h-4 w-4 text-muted-foreground" />
+                              <span>{project.duration}</span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-4 w-4 text-muted-foreground" />
-                            <span>{project.duration}</span>
-                          </div>
-                        </div>
 
-                        {expandedProject === project.id && (
-                          <div className="mt-4 space-y-2">
-                            <h4 className="font-semibold text-sm mb-2">Principais Resultados</h4>
-                            <ul className="list-disc list-inside text-muted-foreground space-y-2">
-                              {project.achievements?.map(
-                                (achievement, index) => (
-                                  <li key={index}>{achievement}</li>
-                                ),
-                              )}
-                            </ul>
-                          </div>
-                        )}
-                      </CardContent>
-                      <CardFooter className="flex justify-between border-t bg-muted/20 pt-3">
-                        <div className="flex gap-1">
-                          {user && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => deleteProject(company.id, project.id as string)}
-                              className="text-xs flex items-center gap-1 text-destructive hover:text-destructive p-1"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
+                          {expandedProject === project.id && (
+                            <div className="mt-4 space-y-2">
+                              <h4 className="font-semibold text-sm mb-2">Principais Resultados</h4>
+                              <ul className="list-disc list-inside text-muted-foreground space-y-2">
+                                {project.achievements?.map(
+                                  (achievement, index) => (
+                                    <li key={index}>{achievement}</li>
+                                  ),
+                                )}
+                              </ul>
+                            </div>
                           )}
+                        </CardContent>
+                        <CardFooter className="flex justify-end border-t bg-muted/20 pt-3">
                           <Button
                             variant="outline"
                             size="sm"
                             onClick={() => navigate(`/project/${project.id}`)}
-                            className="text-xs flex items-center gap-1 p-1"
+                            className="text-xs flex items-center gap-1"
                           >
                             <ExternalLink className="h-3 w-3" />
+                            Ver Detalhes
                           </Button>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => toggleProjectExpansion(project.id)}
-                          className="text-xs flex items-center gap-1"
-                        >
-                          {expandedProject === project.id ? "Menos" : "Mais"}
-                          <ChevronRight
-                            className={`h-3 w-3 transition-transform ${expandedProject === project.id ? "rotate-90" : ""}`}
-                          />
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
+                        </CardFooter>
+                      </Card>
+                    );
+                  })}
                 </div>
               </div>
             ))

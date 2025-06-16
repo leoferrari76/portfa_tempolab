@@ -112,6 +112,7 @@ const ProjectDetail: React.FC = () => {
     }
 
     if (data) {
+      console.log("Dados do projeto carregados no ProjectDetail:", data);
       setProject(data as Project);
       setEditProjectData(data as Omit<Project, 'id'>); // Preenche os dados para edição
     }
