@@ -13,6 +13,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css'; // Importa os estilos do Quill
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/context/AuthContext";
 
@@ -43,6 +45,54 @@ const ProjectDetail: React.FC = () => {
   const [currentEditTextBlock, setCurrentEditTextBlock] = useState("");
   const [currentEditAchievement, setCurrentEditAchievement] = useState("");
 
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, false] }],
+      ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['link', 'image'],
+      ['clean']
+    ],
+  };
+
+  const quillFormats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike', 'blockquote',
+    'list', 'bullet',
+    'link', 'image',
+  ];
+
+  const imageHandler = () => {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (file) {
+        const filename = `${Date.now()}-${file.name}`;
+        const { data, error } = await supabase.storage
+          .from('project-images') // Use o nome do seu bucket aqui
+          .upload(filename, file);
+
+        if (error) {
+          console.error("Erro ao fazer upload da imagem:", error);
+          alert("Erro ao fazer upload da imagem. Por favor, tente novamente.");
+          return;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('project-images')
+          .getPublicUrl(data.path);
+
+        const editor = (this as any).quill;
+        const range = editor.getSelection();
+        editor.insertEmbed(range.index, 'image', publicUrlData.publicUrl);
+      }
+    };
+  };
+
   const fetchProject = async () => {
     setLoading(true);
     if (!id) {
@@ -70,6 +120,11 @@ const ProjectDetail: React.FC = () => {
 
   useEffect(() => {
     fetchProject();
+    // Certifica-se de que o Quill use o manipulador de imagem customizado
+    const quill = (ReactQuill as any).quill;
+    if (quill) {
+      quill.getModule('toolbar').addHandler('image', imageHandler);
+    }
   }, [id]);
 
   const openEditModal = () => {
@@ -180,7 +235,10 @@ const ProjectDetail: React.FC = () => {
             </div>
           </div>
 
-          <p className="text-lg leading-relaxed mb-6">{project.description}</p>
+          <p
+            className="text-xl text-muted-foreground"
+            dangerouslySetInnerHTML={{ __html: project.description }}
+          ></p>
 
           {user && (
             <div className="flex justify-end mb-4">
@@ -196,11 +254,12 @@ const ProjectDetail: React.FC = () => {
           <h2 className="text-2xl font-bold mb-6">Conteúdo do Projeto</h2>
           <div className="space-y-6">
             {project.contentBlocks?.map((block, index) => (
-              <div key={block.id || index} className="flex flex-col items-center">
+              <div key={block.id || index} className="flex flex-col items-start">
                 {block.type === "text" ? (
-                  <p className="text-muted-foreground text-center max-w-2xl mx-auto">
-                    {block.content}
-                  </p>
+                  <p
+                    className="text-muted-foreground max-w-2xl mx-auto text-left"
+                    dangerouslySetInnerHTML={{ __html: block.content }}
+                  ></p>
                 ) : (
                   <img
                     src={block.content}
@@ -251,16 +310,18 @@ const ProjectDetail: React.FC = () => {
 
               <div className="space-y-2">
                 <Label htmlFor="edit-description">Descrição</Label>
-                <Textarea
-                  id="edit-description"
+                <ReactQuill
+                  theme="snow"
                   value={editProjectData.description}
-                  onChange={(e) =>
+                  onChange={(content) =>
                     setEditProjectData((prev) =>
-                      prev ? { ...prev, description: e.target.value } : null,
+                      prev ? { ...prev, description: content } : null,
                     )
                   }
-                  placeholder="Descrição do projeto..."
-                  rows={3}
+                  placeholder="Uma breve descrição do projeto..."
+                  className="min-h-[100px]"
+                  modules={quillModules}
+                  formats={quillFormats}
                 />
               </div>
 
@@ -297,16 +358,12 @@ const ProjectDetail: React.FC = () => {
               {/* Content Blocks (similar logic as ProjectShowcase for adding/removing) */}
               <div className="space-y-2">
                 <Label>Conteúdo Detalhado (Texto e Imagens)</Label>
-                {/* Simplified for brevity, usually involves state for currentTextBlock/Image */}
-                {/* Add logic here to display and edit existing contentBlocks, and add new ones */}
-                {/* For example, by mapping editProjectData.contentBlocks */}
-
                 {editProjectData.contentBlocks && editProjectData.contentBlocks.length > 0 && (
                   <div className="space-y-2 mt-2">
                     {editProjectData.contentBlocks.map((block, index) => (
                       <div key={block.id || index} className="flex items-center justify-between bg-muted p-2 rounded text-sm">
                         {block.type === "text" ? (
-                          <span>{block.content}</span>
+                          <span dangerouslySetInnerHTML={{ __html: block.content }}></span>
                         ) : (
                           <img src={block.content} alt="Content preview" className="h-12 w-12 object-cover rounded" />
                         )}
@@ -323,18 +380,21 @@ const ProjectDetail: React.FC = () => {
                 )}
                 {/* Add new text block input */}
                 <div className="flex gap-2">
-                  <Textarea
-                    placeholder="Adicione um bloco de texto..."
-                    rows={3}
+                  <ReactQuill
+                    theme="snow"
                     value={currentEditTextBlock}
-                    onChange={(e) => setCurrentEditTextBlock(e.target.value)}
+                    onChange={setCurrentEditTextBlock}
+                    placeholder="Adicione um bloco de texto..."
+                    className="flex-grow"
+                    modules={quillModules}
+                    formats={quillFormats}
                   />
                   <Button
                     type="button"
                     size="sm"
                     className="self-start"
                     onClick={() => {
-                      if (currentEditTextBlock.trim()) {
+                      if (currentEditTextBlock.trim() && currentEditTextBlock !== '<p><br></p>') { // Check for actual content
                         setEditProjectData(prev => prev ? { ...prev, contentBlocks: [...(prev.contentBlocks || []), { id: `block-${Date.now()}`, type: "text", content: currentEditTextBlock.trim() }] } : null);
                         setCurrentEditTextBlock(""); // Limpa o campo após adicionar
                       }
@@ -343,39 +403,11 @@ const ProjectDetail: React.FC = () => {
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
-                {/* Add image block input */}
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                          const imageUrl = event.target?.result as string;
-                          setEditProjectData(prev => prev ? { ...prev, contentBlocks: [...(prev.contentBlocks || []), { id: `block-${Date.now()}`, type: "image", content: imageUrl }] } : null);
-                        };
-                        reader.readAsDataURL(file);
-                      }
-                    }}
-                    className="hidden"
-                    id="edit-image-upload"
-                  />
-                  <Label
-                    htmlFor="edit-image-upload"
-                    className="flex items-center gap-2 cursor-pointer bg-secondary hover:bg-secondary/80 px-3 py-2 rounded-md text-sm"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Adicionar Imagem
-                  </Label>
-                </div>
               </div>
 
               {/* Achievements */}
               <div className="space-y-2">
                 <Label>Principais Resultados</Label>
-                {/* Similar logic as contentBlocks for adding/removing achievements */}
                 {editProjectData.achievements && editProjectData.achievements.length > 0 && (
                   <div className="space-y-1 mt-2">
                     {editProjectData.achievements.map((achievement, index) => (

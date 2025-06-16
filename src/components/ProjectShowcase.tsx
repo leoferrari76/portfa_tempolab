@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import 'react-quill/dist/quill.snow.css'; // Importa os estilos do Quill
+import ReactQuill from 'react-quill';
 
 import {
   Card,
@@ -94,6 +96,62 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
   const [currentTextBlock, setCurrentTextBlock] = useState("");
   const navigate = useNavigate();
   const { user } = useAuth();
+
+  const quillModules = {
+    toolbar: [
+      [{ 'header': [1, 2, false] }],
+      ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['link', 'image'],
+      ['clean']
+    ],
+  };
+
+  const quillFormats = [
+    'header',
+    'bold', 'italic', 'underline', 'strike', 'blockquote',
+    'list', 'bullet',
+    'link', 'image',
+  ];
+
+  const imageHandler = () => {
+    const input = document.createElement('input');
+    input.setAttribute('type', 'file');
+    input.setAttribute('accept', 'image/*');
+    input.click();
+
+    input.onchange = async () => {
+      const file = input.files?.[0];
+      if (file) {
+        const filename = `${Date.now()}-${file.name}`;
+        const { data, error } = await supabase.storage
+          .from('project-images') // Use o nome do seu bucket aqui
+          .upload(filename, file);
+
+        if (error) {
+          console.error("Erro ao fazer upload da imagem:", error);
+          alert("Erro ao fazer upload da imagem. Por favor, tente novamente.");
+          return;
+        }
+
+        const { data: publicUrlData } = supabase.storage
+          .from('project-images')
+          .getPublicUrl(data.path);
+
+        const editor = (this as any).quill;
+        const range = editor.getSelection();
+        editor.insertEmbed(range.index, 'image', publicUrlData.publicUrl);
+      }
+    };
+  };
+
+  useEffect(() => {
+    // Certifica-se de que o Quill use o manipulador de imagem customizado
+    const quill = (ReactQuill as any).quill;
+    if (quill) {
+      quill.getModule('toolbar').addHandler('image', imageHandler);
+    }
+  }, []);
 
   // Efeito para carregar projetos do Supabase na montagem do componente
   useEffect(() => {
@@ -329,9 +387,9 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                     <Card key={project.id}>
                       <CardHeader>
                         <CardTitle>{project.title}</CardTitle>
-                        <CardDescription>
-                          {project.description}
-                        </CardDescription>
+                        <CardDescription
+                          dangerouslySetInnerHTML={{ __html: project.description }}
+                        ></CardDescription>
                       </CardHeader>
                       <CardContent>
                         {project.contentBlocks &&
@@ -443,16 +501,16 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
 
               <div className="space-y-2">
                 <Label htmlFor="description">Descrição</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Uma breve descrição do projeto..."
+                <ReactQuill
+                  theme="snow"
                   value={newProjectData.description}
-                  onChange={(e) =>
-                    setNewProjectData((prev) => ({
-                      ...prev,
-                      description: e.target.value,
-                    }))
+                  onChange={(content) =>
+                    setNewProjectData((prev) => ({ ...prev, description: content }))
                   }
+                  placeholder="Uma breve descrição do projeto..."
+                  className="min-h-[100px]"
+                  modules={quillModules}
+                  formats={quillFormats}
                 />
               </div>
 
@@ -480,11 +538,14 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                   </div>
                 )}
                 <div className="flex gap-2">
-                  <Textarea
-                    placeholder="Adicione um bloco de texto..."
-                    rows={3}
+                  <ReactQuill
+                    theme="snow"
                     value={currentTextBlock}
-                    onChange={(e) => setCurrentTextBlock(e.target.value)}
+                    onChange={setCurrentTextBlock}
+                    placeholder="Adicione um bloco de texto..."
+                    className="flex-grow"
+                    modules={quillModules}
+                    formats={quillFormats}
                   />
                   <Button
                     type="button"
@@ -494,22 +555,6 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                   >
                     <Plus className="h-4 w-4" />
                   </Button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    id="image-upload"
-                  />
-                  <Label
-                    htmlFor="image-upload"
-                    className="flex items-center gap-2 cursor-pointer bg-secondary hover:bg-secondary/80 px-3 py-2 rounded-md text-sm"
-                  >
-                    <Upload className="h-4 w-4" />
-                    Adicionar Imagem
-                  </Label>
                 </div>
               </div>
               {/* Achievements (Principais Resultados) */}

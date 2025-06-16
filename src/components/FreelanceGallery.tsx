@@ -115,9 +115,9 @@ const FreelanceGallery = ({
                     <CardDescription>{project.category}</CardDescription>
                   </CardHeader>
                   <CardContent className="flex-grow">
-                    <p className="text-sm text-muted-foreground">
-                      {project.description}
-                    </p>
+                    <p className="text-sm text-muted-foreground"
+                      dangerouslySetInnerHTML={{ __html: project.description }}
+                    ></p>
                     <div className="flex flex-wrap gap-2 mt-4">
                       {project.technologies.map((tech, index) => (
                         <Badge key={index} variant="secondary">
