@@ -1,10 +1,5 @@
 import React, { useState } from "react";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+
 import {
   Card,
   CardContent,
@@ -33,7 +28,15 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ChevronRight, Plus, Trash2, ExternalLink, X } from "lucide-react";
+import {
+  ChevronRight,
+  Plus,
+  Trash2,
+  ExternalLink,
+  X,
+  Upload,
+  Image as ImageIcon,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Technology {
@@ -41,10 +44,17 @@ interface Technology {
   color?: "default" | "secondary" | "destructive" | "outline";
 }
 
+interface ContentBlock {
+  id: string;
+  type: "text" | "image";
+  content: string; // For text blocks, this is the text. For image blocks, this is the image URL
+}
+
 interface Project {
   id: string;
   title: string;
   description: string;
+  contentBlocks?: ContentBlock[];
   role: string;
   duration: string;
   technologies: Technology[];
@@ -109,80 +119,6 @@ const defaultCompanies: Company[] = [
       },
     ],
   },
-  {
-    id: "company-2",
-    name: "Digital Solutions Group",
-    period: "2018 - 2020",
-    description:
-      "Specialized in digital transformation and custom software development.",
-    projects: [
-      {
-        id: "project-2-1",
-        title: "Healthcare Patient Portal",
-        description:
-          "Built a secure patient portal for a major healthcare provider.",
-        role: "Full Stack Developer",
-        duration: "12 months",
-        technologies: [
-          { name: "Angular", color: "destructive" },
-          { name: ".NET Core", color: "default" },
-          { name: "SQL Server", color: "secondary" },
-          { name: "Azure", color: "outline" },
-        ],
-        achievements: [
-          "HIPAA compliant implementation",
-          "Integrated with 3 EHR systems",
-          "Implemented secure messaging system",
-        ],
-      },
-      {
-        id: "project-2-2",
-        title: "Retail Analytics Dashboard",
-        description:
-          "Created a real-time analytics dashboard for a retail chain.",
-        role: "Frontend Lead",
-        duration: "6 months",
-        technologies: [
-          { name: "Vue.js", color: "default" },
-          { name: "D3.js", color: "secondary" },
-          { name: "Firebase", color: "destructive" },
-        ],
-        achievements: [
-          "Real-time data visualization",
-          "Responsive design for all devices",
-          "Customizable reporting features",
-        ],
-      },
-    ],
-  },
-  {
-    id: "company-3",
-    name: "Global Tech Partners",
-    period: "2016 - 2018",
-    description:
-      "Provided technology consulting services to international clients.",
-    projects: [
-      {
-        id: "project-3-1",
-        title: "Financial Trading Platform",
-        description:
-          "Developed a high-frequency trading platform for a financial institution.",
-        role: "Backend Developer",
-        duration: "14 months",
-        technologies: [
-          { name: "Java", color: "default" },
-          { name: "Spring Boot", color: "secondary" },
-          { name: "PostgreSQL", color: "outline" },
-          { name: "Kafka", color: "destructive" },
-        ],
-        achievements: [
-          "Processed 10,000+ transactions per second",
-          "Implemented fault-tolerant architecture",
-          "Reduced latency by 65%",
-        ],
-      },
-    ],
-  },
 ];
 
 const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
@@ -197,6 +133,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
   const [newProjectData, setNewProjectData] = useState({
     title: "",
     description: "",
+    contentBlocks: [] as ContentBlock[],
     role: "",
     duration: "",
     technologies: [] as Technology[],
@@ -204,6 +141,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
   });
   const [currentTech, setCurrentTech] = useState("");
   const [currentAchievement, setCurrentAchievement] = useState("");
+  const [currentTextBlock, setCurrentTextBlock] = useState("");
   const navigate = useNavigate();
 
   const toggleProjectExpansion = (projectId: string) => {
@@ -221,6 +159,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
     setNewProjectData({
       title: "",
       description: "",
+      contentBlocks: [],
       role: "",
       duration: "",
       technologies: [],
@@ -228,6 +167,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
     });
     setCurrentTech("");
     setCurrentAchievement("");
+    setCurrentTextBlock("");
   };
 
   const addTechnology = () => {
@@ -267,6 +207,54 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
     }));
   };
 
+  const addTextBlock = () => {
+    if (currentTextBlock.trim()) {
+      const newBlock: ContentBlock = {
+        id: `block-${Date.now()}`,
+        type: "text",
+        content: currentTextBlock.trim(),
+      };
+      setNewProjectData((prev) => ({
+        ...prev,
+        contentBlocks: [...prev.contentBlocks, newBlock],
+      }));
+      setCurrentTextBlock("");
+    }
+  };
+
+  const addImageBlock = (imageUrl: string) => {
+    if (imageUrl.trim()) {
+      const newBlock: ContentBlock = {
+        id: `block-${Date.now()}`,
+        type: "image",
+        content: imageUrl.trim(),
+      };
+      setNewProjectData((prev) => ({
+        ...prev,
+        contentBlocks: [...prev.contentBlocks, newBlock],
+      }));
+    }
+  };
+
+  const removeContentBlock = (blockId: string) => {
+    setNewProjectData((prev) => ({
+      ...prev,
+      contentBlocks: prev.contentBlocks.filter((block) => block.id !== blockId),
+    }));
+  };
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const imageUrl = e.target?.result as string;
+        addImageBlock(imageUrl);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const saveProject = () => {
     if (!selectedCompanyId || !newProjectData.title.trim()) return;
 
@@ -274,6 +262,10 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
       id: `project-${Date.now()}`,
       title: newProjectData.title,
       description: newProjectData.description,
+      contentBlocks:
+        newProjectData.contentBlocks.length > 0
+          ? newProjectData.contentBlocks
+          : undefined,
       role: newProjectData.role,
       duration: newProjectData.duration,
       technologies: newProjectData.technologies,
@@ -319,121 +311,143 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
           and implement innovative solutions.
         </p>
 
-        <Accordion type="single" collapsible className="w-full">
+        <div className="space-y-12">
           {companiesList.map((company) => (
-            <AccordionItem key={company.id} value={company.id}>
-              <AccordionTrigger className="hover:bg-muted/50 px-4 rounded-md">
-                <div className="flex flex-col sm:flex-row sm:items-center w-full text-left">
-                  <h3 className="text-xl font-semibold">{company.name}</h3>
-                  <span className="text-muted-foreground sm:ml-auto">
+            <div key={company.id} className="space-y-6">
+              <div className="text-center space-y-2">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2">
+                  <h3 className="text-2xl font-bold">{company.name}</h3>
+                  <span className="text-muted-foreground text-lg">
                     {company.period}
                   </span>
                 </div>
-              </AccordionTrigger>
-              <AccordionContent className="px-4">
-                <div className="mb-6">
-                  <p className="text-muted-foreground">{company.description}</p>
-                </div>
+                <p className="text-muted-foreground max-w-2xl mx-auto">
+                  {company.description}
+                </p>
+              </div>
 
-                <div className="flex justify-end mb-4">
-                  <Button
-                    onClick={() => openModal(company.id)}
-                    className="flex items-center gap-2"
-                    size="sm"
+              <div className="flex justify-center mb-6">
+                <Button
+                  onClick={() => openModal(company.id)}
+                  className="flex items-center gap-2"
+                >
+                  <Plus className="h-4 w-4" />
+                  Adicionar Projeto
+                </Button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {company.projects.map((project) => (
+                  <Card
+                    key={project.id}
+                    className="overflow-hidden border border-muted hover:shadow-lg transition-shadow"
                   >
-                    <Plus className="h-4 w-4" />
-                    Adicionar Projeto
-                  </Button>
-                </div>
+                    <CardHeader>
+                      <CardTitle className="text-lg">{project.title}</CardTitle>
+                      <CardDescription className="flex items-center gap-2">
+                        <span className="font-medium">{project.role}</span>
+                        <span className="text-xs text-muted-foreground">
+                          ({project.duration})
+                        </span>
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="mb-4 text-sm">{project.description}</p>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {company.projects.map((project) => (
-                    <Card
-                      key={project.id}
-                      className="overflow-hidden border border-muted"
-                    >
-                      <CardHeader>
-                        <CardTitle>{project.title}</CardTitle>
-                        <CardDescription className="flex items-center gap-2">
-                          <span className="font-medium">{project.role}</span>
-                          <span className="text-xs text-muted-foreground">
-                            ({project.duration})
-                          </span>
-                        </CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="mb-4">{project.description}</p>
-
-                        {expandedProject === project.id &&
-                          project.achievements && (
-                            <div className="mt-4">
-                              <h4 className="font-medium mb-2">
-                                Key Achievements:
-                              </h4>
-                              <ul className="list-disc pl-5 space-y-1">
-                                {project.achievements.map(
-                                  (achievement, index) => (
-                                    <li key={index} className="text-sm">
-                                      {achievement}
-                                    </li>
-                                  ),
+                      {expandedProject === project.id &&
+                        project.contentBlocks && (
+                          <div className="mt-4 space-y-4">
+                            <h4 className="font-medium mb-2 text-sm">
+                              Conteúdo Detalhado:
+                            </h4>
+                            {project.contentBlocks.map((block) => (
+                              <div key={block.id}>
+                                {block.type === "text" ? (
+                                  <p className="text-xs leading-relaxed">
+                                    {block.content}
+                                  </p>
+                                ) : (
+                                  <div className="flex justify-center">
+                                    <img
+                                      src={block.content}
+                                      alt="Project content"
+                                      className="max-w-full h-auto rounded-lg shadow-sm border"
+                                      style={{ maxHeight: "200px" }}
+                                    />
+                                  </div>
                                 )}
-                              </ul>
-                            </div>
-                          )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
 
-                        <div className="flex flex-wrap gap-2 mt-4">
-                          {project.technologies.map((tech, index) => (
-                            <Badge key={index} variant={tech.color}>
-                              {tech.name}
-                            </Badge>
-                          ))}
-                        </div>
-                      </CardContent>
-                      <CardFooter className="flex justify-between border-t bg-muted/20 pt-3">
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              deleteProject(company.id, project.id)
-                            }
-                            className="text-xs flex items-center gap-1 text-destructive hover:text-destructive"
+                      {expandedProject === project.id &&
+                        project.achievements && (
+                          <div className="mt-4">
+                            <h4 className="font-medium mb-2 text-sm">
+                              Key Achievements:
+                            </h4>
+                            <ul className="list-disc pl-4 space-y-1">
+                              {project.achievements.map(
+                                (achievement, index) => (
+                                  <li key={index} className="text-xs">
+                                    {achievement}
+                                  </li>
+                                ),
+                              )}
+                            </ul>
+                          </div>
+                        )}
+
+                      <div className="flex flex-wrap gap-1 mt-4">
+                        {project.technologies.map((tech, index) => (
+                          <Badge
+                            key={index}
+                            variant={tech.color}
+                            className="text-xs"
                           >
-                            <Trash2 className="h-4 w-4" />
-                            Deletar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/project/${project.id}`)}
-                            className="text-xs flex items-center gap-1"
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                            Ver Detalhes
-                          </Button>
-                        </div>
+                            {tech.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-between border-t bg-muted/20 pt-3">
+                      <div className="flex gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => toggleProjectExpansion(project.id)}
-                          className="text-xs flex items-center gap-1"
+                          onClick={() => deleteProject(company.id, project.id)}
+                          className="text-xs flex items-center gap-1 text-destructive hover:text-destructive p-1"
                         >
-                          {expandedProject === project.id
-                            ? "Mostrar Menos"
-                            : "Mostrar Mais"}
-                          <ChevronRight
-                            className={`h-4 w-4 transition-transform ${expandedProject === project.id ? "rotate-90" : ""}`}
-                          />
+                          <Trash2 className="h-3 w-3" />
                         </Button>
-                      </CardFooter>
-                    </Card>
-                  ))}
-                </div>
-              </AccordionContent>
-            </AccordionItem>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/project/${project.id}`)}
+                          className="text-xs flex items-center gap-1 p-1"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleProjectExpansion(project.id)}
+                        className="text-xs flex items-center gap-1"
+                      >
+                        {expandedProject === project.id ? "Menos" : "Mais"}
+                        <ChevronRight
+                          className={`h-3 w-3 transition-transform ${expandedProject === project.id ? "rotate-90" : ""}`}
+                        />
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                ))}
+              </div>
+            </div>
           ))}
-        </Accordion>
+        </div>
 
         {/* Modal for adding new project */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -539,6 +553,88 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                           <X className="h-3 w-3" />
                         </button>
                       </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Conteúdo Detalhado (Texto e Imagens)</Label>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Textarea
+                      value={currentTextBlock}
+                      onChange={(e) => setCurrentTextBlock(e.target.value)}
+                      placeholder="Adicione um bloco de texto..."
+                      rows={3}
+                    />
+                    <Button
+                      type="button"
+                      onClick={addTextBlock}
+                      size="sm"
+                      className="self-start"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="image-upload"
+                    />
+                    <Label
+                      htmlFor="image-upload"
+                      className="flex items-center gap-2 cursor-pointer bg-secondary hover:bg-secondary/80 px-3 py-2 rounded-md text-sm"
+                    >
+                      <Upload className="h-4 w-4" />
+                      Adicionar Imagem
+                    </Label>
+                  </div>
+                </div>
+
+                {newProjectData.contentBlocks.length > 0 && (
+                  <div className="space-y-2 mt-4 max-h-60 overflow-y-auto">
+                    <h4 className="text-sm font-medium">Blocos de Conteúdo:</h4>
+                    {newProjectData.contentBlocks.map((block, index) => (
+                      <div
+                        key={block.id}
+                        className="flex items-start justify-between bg-muted p-3 rounded text-sm gap-2"
+                      >
+                        <div className="flex items-start gap-2 flex-1">
+                          {block.type === "text" ? (
+                            <div className="flex items-start gap-2">
+                              <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded font-medium">
+                                TEXTO
+                              </span>
+                              <p className="text-xs leading-relaxed flex-1">
+                                {block.content}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="flex items-start gap-2">
+                              <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded font-medium">
+                                IMAGEM
+                              </span>
+                              <img
+                                src={block.content}
+                                alt={`Content block ${index + 1}`}
+                                className="w-16 h-16 object-cover rounded border"
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeContentBlock(block.id)}
+                          className="text-muted-foreground hover:text-destructive flex-shrink-0"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 )}
