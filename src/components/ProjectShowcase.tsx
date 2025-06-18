@@ -369,7 +369,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = () => {
                 return (
                   <Card
                     key={project.id}
-                    className="rounded-none bg-white flex flex-col overflow-hidden cursor-pointer border border-muted"
+                    className="rounded-none bg-white flex flex-col overflow-hidden cursor-pointer border-0"
                     onClick={() => navigate(`/project/${project.id}`)}
                   >
                     {mainImage && (

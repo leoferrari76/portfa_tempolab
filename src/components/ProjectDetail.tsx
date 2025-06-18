@@ -382,7 +382,7 @@ const ProjectDetail: React.FC = () => {
                 {/* Coluna de textos */}
                 <div className="space-y-6 md:col-span-2">
                   {project.contentBlocks.filter(b => b.type === 'text').map(block => (
-                    <div key={block.id} className="prose max-w-none pr-4 bg-card rounded-lg shadow-sm border">
+                    <div key={block.id} className="prose max-w-none pr-4 bg-card rounded-lg border-0">
                       <div dangerouslySetInnerHTML={{ __html: block.content }} />
                     </div>
                   ))}
