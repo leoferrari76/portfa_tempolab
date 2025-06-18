@@ -51,17 +51,6 @@ const AboutSection = ({
 
           {/* Bio Content */}
           <div className="w-full md:w-1/2 space-y-6">
-            <div className="space-y-2">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tighter">
-                {name}
-              </h1>
-              <p className="text-lg text-muted-foreground">{title}</p>
-              <div className="flex flex-col sm:flex-row gap-2 text-sm text-muted-foreground">
-                <span>📍 {location}</span>
-                <span>📧 {contactEmail}</span>
-                <span>📱 {phone}</span>
-              </div>
-            </div>
             <div className="space-y-4">
               <h2 className="text-2xl font-semibold">Sobre mim</h2>
               <p className="text-muted-foreground leading-relaxed">{bio}</p>

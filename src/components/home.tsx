@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { Separator } from "./ui/separator";
 import AboutSection from "./AboutSection";
 import ProjectShowcase from "./ProjectShowcase";
+import ExperienceSection from "./ExperienceSection";
 
 const Home = () => {
   return (
@@ -86,6 +87,20 @@ const Home = () => {
             transition={{ duration: 0.6 }}
           >
             <AboutSection />
+          </motion.div>
+        </section>
+
+        <Separator />
+
+        {/* Experience Section */}
+        <section id="experience" className="py-8">
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <ExperienceSection />
           </motion.div>
         </section>
 

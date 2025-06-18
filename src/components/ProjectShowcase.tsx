@@ -365,69 +365,46 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {projectsList.map((project) => {
-                const mainImage = (project as any).imageUrl; // Acessa a URL da imagem principal do projeto
+                const mainImage = (project as any).imageUrl || "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=600&q=80";
                 return (
                   <Card
                     key={project.id}
-                    className="overflow-hidden h-full flex flex-col cursor-pointer transition-all hover:shadow-lg"
-                    onClick={() => navigate(`/project/${project.id}`)} // Torna o card clicável para ir para os detalhes
+                    className="rounded-none bg-white flex flex-col overflow-hidden cursor-pointer border border-muted"
+                    onClick={() => navigate(`/project/${project.id}`)}
                   >
                     {mainImage && (
-                      <div className="relative w-full h-48 bg-muted overflow-hidden">
-                        <img
-                          src={mainImage}
-                          alt={project.title}
-                          className="w-full h-full object-cover"
-                        />
-                      </div>
-                    )}
-                    <CardHeader>
-                      <CardTitle>{project.title}</CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex-grow">
-                      <div
-                        className="text-sm text-muted-foreground line-clamp-3"
-                        dangerouslySetInnerHTML={{ __html: project.description }}
+                      <img
+                        src={mainImage}
+                        alt={project.title}
+                        className="w-full h-48 object-cover rounded-t-none"
                       />
-                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
-                        <div className="flex items-center gap-1">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span>{project.role}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span>{project.duration}</span>
-                        </div>
+                    )}
+                    <div className="p-6 flex flex-col flex-1">
+                      <h3 className="text-xl font-bold mb-2">{project.title}</h3>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {project.role && (
+                          <Badge variant="secondary" className="text-xs font-medium bg-blue-100 text-blue-800">
+                            {project.role}
+                          </Badge>
+                        )}
+                        {project.duration && (
+                          <Badge variant="secondary" className="text-xs font-medium bg-green-100 text-green-800">
+                            {project.duration}
+                          </Badge>
+                        )}
                       </div>
-                    </CardContent>
-                    <CardFooter className="flex justify-end border-t bg-muted/20 pt-3">
-                      {user && (
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation(); // Evita que o click no botão ative o clique do card
-                            deleteProject(project.id!); // Garante que o ID não seja undefined
-                          }}
-                          className="text-xs flex items-center gap-1 mr-2"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          Deletar
-                        </Button>
-                      )}
+                      <div className="text-muted-foreground text-sm flex-1 line-clamp-3 mb-4" dangerouslySetInnerHTML={{ __html: project.description }} />
                       <Button
                         variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation(); // Evita que o click no botão ative o clique do card
+                        className="mt-auto"
+                        onClick={e => {
+                          e.stopPropagation();
                           navigate(`/project/${project.id}`);
                         }}
-                        className="text-xs flex items-center gap-1"
                       >
-                        <ExternalLink className="h-3 w-3" />
                         Ver Detalhes
                       </Button>
-                    </CardFooter>
+                    </div>
                   </Card>
                 );
               })}
