@@ -378,32 +378,27 @@ const ProjectDetail: React.FC = () => {
             )}
 
             {project.contentBlocks && project.contentBlocks.length > 0 && (
-              <div className="space-y-8">
-                <h2 className="text-3xl font-bold mb-4">Processo e Detalhes</h2>
-                {project.contentBlocks.map((block) => (
-                  <div key={block.id} className="w-full">
-                    {block.type === "image" ? (
-                      <div className="relative group">
-                        <img
-                          src={block.content}
-                          alt={block.caption || "Imagem do Projeto"}
-                          className="w-full h-auto rounded-lg shadow-lg cursor-pointer transform transition-transform duration-300 group-hover:scale-[1.005] object-contain"
-                          onClick={() => openImageModal(block.content)}
-                        />
-                        {block.caption && (
-                          <p className="text-center text-sm text-muted-foreground mt-2">
-                            {block.caption}
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      <div
-                        className="prose max-w-none p-4 bg-card rounded-lg shadow-sm border"
-                        dangerouslySetInnerHTML={{ __html: block.content }}
-                      />
-                    )}
-                  </div>
-                ))}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                {/* Coluna de textos */}
+                <div className="space-y-6 md:col-span-2">
+                  {project.contentBlocks.filter(b => b.type === 'text').map(block => (
+                    <div key={block.id} className="prose max-w-none pr-4 bg-card rounded-lg shadow-sm border">
+                      <div dangerouslySetInnerHTML={{ __html: block.content }} />
+                    </div>
+                  ))}
+                </div>
+                {/* Coluna de imagens */}
+                <div className="space-y-6 md:col-span-1 flex flex-col items-center">
+                  {project.contentBlocks.filter(b => b.type === 'image').map(block => (
+                    <img
+                      key={block.id}
+                      src={block.content}
+                      alt={block.caption || 'Imagem do Projeto'}
+                      className="rounded-lg shadow-md object-cover w-full max-w-xs max-h-60 cursor-pointer mb-4 self-start"
+                      onClick={() => openImageModal(block.content)}
+                    />
+                  ))}
+                </div>
               </div>
             )}
           </section>
