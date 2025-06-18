@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Calendar, User, Clock, X, Plus, Upload } from "lucide-react";
+import { ArrowLeft, Calendar, User, Clock, X, Plus, Upload, Trash2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import {
   Dialog,
@@ -21,17 +21,18 @@ import { useAuth } from "@/context/AuthContext";
 interface ContentBlock {
   id: string;
   type: "text" | "image";
-  content: string;
+  content: string; // Para blocos de texto, este é o texto. Para blocos de imagem, esta é a URL da imagem
+  caption?: string; // Legenda opcional para imagens
 }
 
 interface Project {
   id?: string;
   title: string;
   description: string;
-  contentBlocks?: ContentBlock[];
+  contentBlocks?: ContentBlock[]; // Usado para o conteúdo detalhado, incluindo texto e imagens
+  detailedContent?: string; // Conteúdo principal em Rich Text, pode ser usado para uma introdução longa
   role: string;
   duration: string;
-  achievements?: string[];
 }
 
 const ProjectDetail: React.FC = () => {
@@ -40,14 +41,40 @@ const ProjectDetail: React.FC = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
-  const [editProjectData, setEditProjectData] = useState<Omit<Project, 'id'> | null>(null);
+  const [editProjectData, setEditProjectData] = useState<
+    Omit<Project, "id"> | null
+  >(null);
   const { user } = useAuth();
-  const [currentEditTextBlock, setCurrentEditTextBlock] = useState("");
-  const [currentEditAchievement, setCurrentEditAchievement] = useState("");
+  const [currentEditTextBlock, setCurrentEditTextBlock] = useState(""); // Novo estado para adicionar blocos de texto
+  const [newImageBlockUrl, setNewImageBlockUrl] = useState(""); // Novo estado para a URL da imagem a ser adicionada
+  const imageInputRef = React.useRef<HTMLInputElement>(null); // Referência para o input de arquivo de imagem
   const [showImageModal, setShowImageModal] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState("");
 
   const quillModules = {
+    toolbar: [
+      [{ header: [1, 2, false] }],
+      ["bold", "italic", "underline", "strike", "blockquote"],
+      [{ list: "ordered" }, { list: "bullet" }],
+      ["link", "image"],
+      ["clean"],
+    ],
+  };
+
+  const quillFormats = [
+    "header",
+    "bold",
+    "italic",
+    "underline",
+    "strike",
+    "blockquote",
+    "list",
+    "bullet",
+    "link",
+    "image",
+  ];
+
+  const quillModulesForDetailedContent = { // Módulos para o detailedContent (permite imagens)
     toolbar: [
       [{ 'header': [1, 2, false] }],
       ['bold', 'italic', 'underline', 'strike', 'blockquote'],
@@ -57,7 +84,7 @@ const ProjectDetail: React.FC = () => {
     ],
   };
 
-  const quillFormats = [
+  const quillFormatsForDetailedContent = [ // Formatos para o detailedContent
     'header',
     'bold', 'italic', 'underline', 'strike', 'blockquote',
     'list', 'bullet',
@@ -65,6 +92,7 @@ const ProjectDetail: React.FC = () => {
   ];
 
   const imageHandler = () => {
+    // Este imageHandler é para o Quill da descrição principal ou detailedContent
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
     input.setAttribute('accept', 'image/*');
@@ -73,7 +101,16 @@ const ProjectDetail: React.FC = () => {
     input.onchange = async () => {
       const file = input.files?.[0];
       if (file) {
-        const filename = `${Date.now()}-${file.name}`;
+        // Sanitize the filename to remove invalid characters for Supabase Storage
+        const originalFilename = file.name;
+        const sanitizedFilename = originalFilename
+          .normalize("NFD") // Normalize Unicode characters
+          .replace(/[^\w.-]/g, '') // Remove all non-word characters except hyphen and dot
+          .replace(/\s+/g, '-') // Replace spaces with hyphens
+          .replace(/-+/g, '-') // Replace multiple hyphens with a single hyphen
+          .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+
+        const filename = `${Date.now()}-${sanitizedFilename}`;
         const { data, error } = await supabase.storage
           .from('project-images') // Use o nome do seu bucket aqui
           .upload(filename, file);
@@ -136,9 +173,9 @@ const ProjectDetail: React.FC = () => {
         title: project.title,
         description: project.description,
         contentBlocks: project.contentBlocks || [],
+        detailedContent: project.detailedContent || "", // Inclui detailedContent
         role: project.role,
         duration: project.duration,
-        achievements: project.achievements || [],
       });
       setIsEditModalOpen(true);
     }
@@ -147,6 +184,8 @@ const ProjectDetail: React.FC = () => {
   const closeEditModal = () => {
     setIsEditModalOpen(false);
     setEditProjectData(null);
+    setCurrentEditTextBlock("");
+    setNewImageBlockUrl("");
   };
 
   const openImageModal = (src: string) => {
@@ -159,13 +198,86 @@ const ProjectDetail: React.FC = () => {
     setCurrentImageSrc("");
   };
 
+  const addTextBlockToContentBlocks = () => {
+    if (currentEditTextBlock.trim() && editProjectData) {
+      const newBlock: ContentBlock = {
+        id: `block-${Date.now()}`,
+        type: "text",
+        content: currentEditTextBlock.trim(),
+      };
+      setEditProjectData((prev) => ({
+        ...(prev as Omit<Project, "id">),
+        contentBlocks: [...(prev?.contentBlocks || []), newBlock],
+      }));
+      setCurrentEditTextBlock("");
+    }
+  };
+
+  const handleImageUploadForContentBlocks = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const originalFilename = file.name;
+      const sanitizedFilename = originalFilename
+        .normalize("NFD")
+        .replace(/[^\w.-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      const filename = `${Date.now()}-${sanitizedFilename}`;
+      const { data, error } = await supabase.storage
+        .from('project-images')
+        .upload(filename, file);
+
+      if (error) {
+        console.error("Erro ao fazer upload da imagem para o Supabase:", error);
+        alert("Erro ao fazer upload da imagem. Por favor, tente novamente.");
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('project-images')
+        .getPublicUrl(data.path);
+
+      if (editProjectData) {
+        const newBlock: ContentBlock = {
+          id: `block-${Date.now()}`,
+          type: "image",
+          content: publicUrlData.publicUrl,
+        };
+        setEditProjectData((prev) => ({
+          ...(prev as Omit<Project, "id">),
+          contentBlocks: [...(prev?.contentBlocks || []), newBlock],
+        }));
+      }
+    }
+  };
+
+  const removeContentBlock = (blockId: string) => {
+    if (editProjectData) {
+      setEditProjectData((prev) => ({
+        ...(prev as Omit<Project, "id">),
+        contentBlocks: prev?.contentBlocks?.filter((block) => block.id !== blockId) || [],
+      }));
+    }
+  };
+
   const handleUpdateProject = async () => {
     if (!id || !editProjectData || !editProjectData.title.trim()) return;
 
+    const projectToUpdate = {
+      title: editProjectData.title,
+      description: editProjectData.description,
+      contentBlocks: editProjectData.contentBlocks,
+      detailedContent: editProjectData.detailedContent,
+      role: editProjectData.role,
+      duration: editProjectData.duration,
+    };
+
     const { error } = await supabase
-      .from('projects')
-      .update(editProjectData)
-      .eq('id', id);
+      .from("projects")
+      .update(projectToUpdate)
+      .eq("id", id);
 
     if (error) {
       console.error("Erro ao atualizar o projeto:", error);
@@ -248,116 +360,209 @@ const ProjectDetail: React.FC = () => {
             </div>
           </div>
 
-          <p
-            className="text-xl text-muted-foreground"
+          <div
+            className="prose max-w-none mb-8"
             dangerouslySetInnerHTML={{ __html: project.description }}
-          ></p>
+          />
 
-          {user && (
-            <div className="flex justify-end mb-4">
-              <Button onClick={openEditModal} className="flex items-center gap-2">
-                Editar Projeto
-              </Button>
-            </div>
-          )}
+          {/* Detailed Content Section (Behance-like) */}
+          <section className="space-y-8 mt-12">
+            {project.detailedContent && (
+              <div className="space-y-4">
+                <h2 className="text-3xl font-bold mb-4">Visão Geral do Projeto</h2>
+                <div
+                  className="prose max-w-none"
+                  dangerouslySetInnerHTML={{ __html: project.detailedContent }}
+                />
+              </div>
+            )}
+
+            {project.contentBlocks && project.contentBlocks.length > 0 && (
+              <div className="space-y-8">
+                <h2 className="text-3xl font-bold mb-4">Processo e Detalhes</h2>
+                {project.contentBlocks.map((block) => (
+                  <div key={block.id} className="w-full">
+                    {block.type === "image" ? (
+                      <div className="relative group">
+                        <img
+                          src={block.content}
+                          alt={block.caption || "Imagem do Projeto"}
+                          className="w-full h-auto rounded-lg shadow-lg cursor-pointer transform transition-transform duration-300 group-hover:scale-[1.005] object-contain"
+                          onClick={() => openImageModal(block.content)}
+                        />
+                        {block.caption && (
+                          <p className="text-center text-sm text-muted-foreground mt-2">
+                            {block.caption}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <div
+                        className="prose max-w-none p-4 bg-card rounded-lg shadow-sm border"
+                        dangerouslySetInnerHTML={{ __html: block.content }}
+                      />
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
 
-        {/* Conteúdo Detalhado */}
-        {project.contentBlocks && project.contentBlocks.length > 0 && (
-          <div className="mt-12 space-y-8">
-            <h2 className="text-3xl font-bold tracking-tight mb-4">Conteúdo Detalhado</h2>
-            <div
-              className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start"
-              style={{ gridTemplateColumns: '1fr 1fr', gridAutoRows: 'minmax(min-content, max-content)' }}
-            >
-              {project.contentBlocks.map((block) => (
-                <div key={block.id} className="md:col-span-1">
-                  {block.type === "text" ? (
-                    <div
-                      className="text-muted-foreground leading-relaxed"
-                      dangerouslySetInnerHTML={{ __html: block.content }}
-                    />
-                  ) : (
-                    <div className="mb-4">
-                      <img
-                        src={block.content}
-                        alt="Content Image"
-                        className="w-full h-auto max-w-full max-h-96 object-contain rounded-lg cursor-pointer"
-                        onClick={() => openImageModal(block.content)}
-                      />
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Principais Resultados */}
-        {project.achievements && project.achievements.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-3xl font-bold tracking-tight mb-4">Principais Resultados</h2>
-            <ul className="list-disc list-inside text-muted-foreground space-y-2 leading-relaxed">
-              {project.achievements.map((achievement, index) => (
-                <li key={index}>{achievement}</li>
-              ))}
-            </ul>
+        {user && (
+          <div className="flex justify-center mt-8">
+            <Button onClick={openEditModal} className="flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Editar Projeto
+            </Button>
           </div>
         )}
       </main>
 
       {/* Edit Project Modal */}
       <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Projeto</DialogTitle>
           </DialogHeader>
-
           {editProjectData && (
-            <div className="space-y-4">
+            <div className="space-y-6 py-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-title">Título do Projeto *</Label>
                 <Input
                   id="edit-title"
                   value={editProjectData.title}
                   onChange={(e) =>
-                    setEditProjectData((prev) =>
-                      prev ? { ...prev, title: e.target.value } : null,
-                    )
+                    setEditProjectData((prev) => ({
+                      ...(prev as Omit<Project, "id">),
+                      title: e.target.value,
+                    }))
                   }
-                  placeholder="Título do Projeto"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-description">Descrição</Label>
+                <Label htmlFor="edit-description">Descrição Breve</Label>
                 <ReactQuill
                   theme="snow"
                   value={editProjectData.description}
                   onChange={(content) =>
-                    setEditProjectData((prev) =>
-                      prev ? { ...prev, description: content } : null,
-                    )
+                    setEditProjectData((prev) => ({
+                      ...(prev as Omit<Project, "id">),
+                      description: content,
+                    }))
                   }
-                  placeholder="Uma breve descrição do projeto..."
-                  className="min-h-[100px]"
                   modules={quillModules}
                   formats={quillFormats}
+                  className="min-h-[100px]"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Detailed Content (Rich Text) */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-detailed-content">
+                  Conteúdo Detalhado do Projeto (Processo, Resultados, etc.)
+                </Label>
+                <ReactQuill
+                  theme="snow"
+                  value={editProjectData.detailedContent}
+                  onChange={(content) =>
+                    setEditProjectData((prev) => ({
+                      ...(prev as Omit<Project, "id">),
+                      detailedContent: content,
+                    }))
+                  }
+                  modules={quillModulesForDetailedContent}
+                  formats={quillFormatsForDetailedContent}
+                  className="min-h-[200px]"
+                />
+              </div>
+
+              {/* Content Blocks (Text and Images) */}
+              <div className="space-y-4">
+                <Label>Blocos de Conteúdo Adicionais (Imagens e Texto)</Label>
+                <div className="space-y-3">
+                  {editProjectData.contentBlocks?.map((block) => (
+                    <div
+                      key={block.id}
+                      className="flex items-center justify-between bg-muted p-3 rounded-md"
+                    >
+                      {block.type === "text" ? (
+                        <div
+                          className="flex-grow pr-4"
+                          dangerouslySetInnerHTML={{ __html: block.content }}
+                        />
+                      ) : (
+                        <img
+                          src={block.content}
+                          alt={block.caption || "Imagem do bloco"}
+                          className="h-16 w-16 object-cover rounded-md flex-shrink-0 mr-4"
+                        />
+                      )}
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => removeContentBlock(block.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Adicionar Novo Bloco de Texto */}
+                <div className="space-y-2 border-t pt-4">
+                  <Label htmlFor="new-text-block">Adicionar Novo Bloco de Texto</Label>
+                  <Textarea
+                    id="new-text-block"
+                    placeholder="Adicione um parágrafo, etapa do processo, etc."
+                    value={currentEditTextBlock}
+                    onChange={(e) => setCurrentEditTextBlock(e.target.value)}
+                    rows={3}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={addTextBlockToContentBlocks}
+                    disabled={!currentEditTextBlock.trim()}
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Adicionar Texto
+                  </Button>
+                </div>
+
+                {/* Adicionar Nova Imagem */}
+                <div className="space-y-2 border-t pt-4">
+                  <Label htmlFor="new-image-block">Adicionar Nova Imagem</Label>
+                  <Input
+                    id="image-upload-content-block"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUploadForContentBlocks}
+                    className="hidden"
+                    ref={imageInputRef}
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => imageInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4 inline-block mr-2" /> Carregar Imagem
+                  </Button>
+                </div>
+              </div>
+
+              {/* Role and Duration */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-role">Sua Função</Label>
                   <Input
                     id="edit-role"
                     value={editProjectData.role}
                     onChange={(e) =>
-                      setEditProjectData((prev) =>
-                        prev ? { ...prev, role: e.target.value } : null,
-                      )
+                      setEditProjectData((prev) => ({
+                        ...(prev as Omit<Project, "id">),
+                        role: e.target.value,
+                      }))
                     }
-                    placeholder="Ex: Tech Lead"
                   />
                 </div>
 
@@ -367,120 +572,29 @@ const ProjectDetail: React.FC = () => {
                     id="edit-duration"
                     value={editProjectData.duration}
                     onChange={(e) =>
-                      setEditProjectData((prev) =>
-                        prev ? { ...prev, duration: e.target.value } : null,
-                      )
+                      setEditProjectData((prev) => ({
+                        ...(prev as Omit<Project, "id">),
+                        duration: e.target.value,
+                      }))
                     }
-                    placeholder="Ex: 6 meses"
                   />
-                </div>
-              </div>
-
-              {/* Content Blocks (similar logic as ProjectShowcase for adding/removing) */}
-              <div className="space-y-2">
-                <Label>Conteúdo Detalhado (Texto e Imagens)</Label>
-                {editProjectData.contentBlocks && editProjectData.contentBlocks.length > 0 && (
-                  <div className="space-y-2 mt-2">
-                    {editProjectData.contentBlocks.map((block, index) => (
-                      <div key={block.id || index} className="flex items-center justify-between bg-muted p-2 rounded text-sm">
-                        {block.type === "text" ? (
-                          <span dangerouslySetInnerHTML={{ __html: block.content }}></span>
-                        ) : (
-                          <img src={block.content} alt="Content preview" className="h-12 w-12 object-cover rounded" />
-                        )}
-                        <button
-                          type="button"
-                          onClick={() => setEditProjectData(prev => prev ? { ...prev, contentBlocks: prev.contentBlocks?.filter(b => b.id !== block.id) } : null)}
-                          className="text-muted-foreground hover:text-destructive flex-shrink-0"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {/* Add new text block input */}
-                <div className="flex gap-2">
-                  <ReactQuill
-                    theme="snow"
-                    value={currentEditTextBlock}
-                    onChange={setCurrentEditTextBlock}
-                    placeholder="Adicione um bloco de texto..."
-                    className="flex-grow"
-                    modules={quillModules}
-                    formats={quillFormats}
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="self-start"
-                    onClick={() => {
-                      if (currentEditTextBlock.trim() && currentEditTextBlock !== '<p><br></p>') { // Check for actual content
-                        setEditProjectData(prev => prev ? { ...prev, contentBlocks: [...(prev.contentBlocks || []), { id: `block-${Date.now()}`, type: "text", content: currentEditTextBlock.trim() }] } : null);
-                        setCurrentEditTextBlock(""); // Limpa o campo após adicionar
-                      }
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-
-              {/* Achievements */}
-              <div className="space-y-2">
-                <Label>Principais Resultados</Label>
-                {editProjectData.achievements && editProjectData.achievements.length > 0 && (
-                  <div className="space-y-1 mt-2">
-                    {editProjectData.achievements.map((achievement, index) => (
-                      <div key={index} className="flex items-center justify-between bg-muted p-2 rounded text-sm">
-                        <span>{achievement}</span>
-                        <button
-                          type="button"
-                          onClick={() => setEditProjectData(prev => prev ? { ...prev, achievements: prev.achievements?.filter((_, i) => i !== index) } : null)}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Adicione um resultado..."
-                    value={currentEditAchievement}
-                    onChange={(e) => setCurrentEditAchievement(e.target.value)}
-                  />
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={() => {
-                      if (currentEditAchievement.trim()) {
-                        setEditProjectData(prev => prev ? { ...prev, achievements: [...(prev.achievements || []), currentEditAchievement.trim()] } : null);
-                        setCurrentEditAchievement(""); // Limpa o campo após adicionar
-                      }
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
                 </div>
               </div>
             </div>
           )}
-
           <DialogFooter>
-            <Button variant="outline" onClick={closeEditModal}>Cancelar</Button>
-            <Button onClick={handleUpdateProject} disabled={!editProjectData?.title.trim()}>Salvar Alterações</Button>
+            <Button variant="outline" onClick={closeEditModal}>
+              Cancelar
+            </Button>
+            <Button onClick={handleUpdateProject}>Salvar Alterações</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Image Modal */}
+      {/* Image Zoom Modal */}
       <Dialog open={showImageModal} onOpenChange={setShowImageModal}>
-        <DialogContent className="max-w-4xl max-h-[90vh] p-0 flex items-center justify-center">
-          {currentImageSrc && (
-            <img src={currentImageSrc} alt="Visualização da imagem" className="max-w-full max-h-full object-contain" />
-          )}
+        <DialogContent className="max-w-4xl">
+          <img src={currentImageSrc} alt="Zoomed Project Image" className="w-full h-auto" />
         </DialogContent>
       </Dialog>
     </div>

@@ -50,51 +50,40 @@ interface ContentBlock {
   id: string;
   type: "text" | "image";
   content: string; // For text blocks, this is the text. For image blocks, this is the image URL
+  caption?: string; // Legenda opcional para imagens
 }
 
 interface Project {
   id?: string;
   title: string;
   description: string;
-  contentBlocks?: ContentBlock[];
+  contentBlocks?: ContentBlock[]; // Usado para o conteúdo detalhado, incluindo texto e imagens
+  detailedContent?: string; // Conteúdo principal em Rich Text, pode ser usado para uma introdução longa
   role: string;
   duration: string;
-  achievements?: string[];
-}
-
-interface Company {
-  id: string;
-  name: string;
-  period: string;
-  description: string;
-  projects: Project[];
 }
 
 interface ProjectShowcaseProps {
-  companies?: Company[];
+  // Não recebe mais `companies` como prop
 }
 
-const defaultCompanies: Company[] = [];
-
-const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
-  companies = defaultCompanies,
-}) => {
+const ProjectShowcase: React.FC<ProjectShowcaseProps> = () => {
   const [expandedProject, setExpandedProject] = useState<string | null>(null);
-  const [companiesList, setCompaniesList] = useState<Company[]>(companies);
+  const [projectsList, setProjectsList] = useState<Project[]>([]); // Muda de companiesList para projectsList
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(
-    null,
-  );
-  const [newProjectData, setNewProjectData] = useState({
+  const [newProjectData, setNewProjectData] = useState<Omit<Project, 'id'> & { tempImageFile: File | null }>({ // Adiciona tempImageFile para o upload da imagem principal do card
     title: "",
     description: "",
-    contentBlocks: [] as ContentBlock[],
+    contentBlocks: [],
+    detailedContent: "",
     role: "",
     duration: "",
-    achievements: [] as string[],
+    tempImageFile: null, // Campo para o arquivo de imagem do card
   });
-  const [currentAchievement, setCurrentAchievement] = useState("");
-  const [currentTextBlock, setCurrentTextBlock] = useState("");
+  const [currentEditTextBlock, setCurrentEditTextBlock] = useState(""); // Para adicionar blocos de texto no modal
+  const imageInputRef = React.useRef<HTMLInputElement>(null); // Adicionando useRef para o input de imagem do card
+  const contentBlockImageInputRef = React.useRef<HTMLInputElement>(null); // Ref para upload de imagem de bloco de conteúdo
+
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -115,7 +104,25 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
     'link', 'image',
   ];
 
+  const quillModulesForDetailedContent = { // Módulos para o detailedContent (permite imagens)
+    toolbar: [
+      [{ 'header': [1, 2, false] }],
+      ['bold', 'italic', 'underline', 'strike', 'blockquote'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      ['link', 'image'],
+      ['clean']
+    ],
+  };
+
+  const quillFormatsForDetailedContent = [
+    'header',
+    'bold', 'italic', 'underline', 'strike', 'blockquote',
+    'list', 'bullet',
+    'link', 'image',
+  ];
+
   const imageHandler = () => {
+    // Este imageHandler é para o Quill da descrição principal ou detailedContent
     const input = document.createElement('input');
     input.setAttribute('type', 'file');
     input.setAttribute('accept', 'image/*');
@@ -124,7 +131,16 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
     input.onchange = async () => {
       const file = input.files?.[0];
       if (file) {
-        const filename = `${Date.now()}-${file.name}`;
+        // Sanitize the filename to remove invalid characters for Supabase Storage
+        const originalFilename = file.name;
+        const sanitizedFilename = originalFilename
+          .normalize("NFD") // Normalize Unicode characters
+          .replace(/[^\w.-]/g, '') // Remove all non-word characters except hyphen and dot
+          .replace(/\s+/g, '-') // Replace spaces with hyphens
+          .replace(/-+/g, '-') // Replace multiple hyphens with a single hyphen
+          .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+
+        const filename = `${Date.now()}-${sanitizedFilename}`;
         const { data, error } = await supabase.storage
           .from('project-images') // Use o nome do seu bucket aqui
           .upload(filename, file);
@@ -165,17 +181,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
       }
 
       if (data) {
-        // Agrupar projetos em uma empresa padrão ou em empresas existentes
-        // Para simplificar, vou colocar todos os projetos em uma única empresa 'Meus Projetos'
-        const companyId = "my-projects-company";
-        const myProjectsCompany: Company = {
-          id: companyId,
-          name: "Meus Projetos",
-          period: "",
-          description: "",
-          projects: data as Project[],
-        };
-        setCompaniesList([myProjectsCompany]);
+        setProjectsList(data as Project[]); // Define diretamente a lista de projetos
       }
     };
     fetchProjects();
@@ -185,64 +191,70 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
     setExpandedProject(expandedProject === projectId ? null : projectId);
   };
 
-  const openModal = (companyId: string) => {
-    setSelectedCompanyId(companyId);
+  const openModal = () => {
     setIsModalOpen(true);
   };
 
   const closeModal = () => {
     setIsModalOpen(false);
-    setSelectedCompanyId(null);
     setNewProjectData({
       title: "",
       description: "",
       contentBlocks: [],
+      detailedContent: "",
       role: "",
       duration: "",
-      achievements: [],
+      tempImageFile: null,
     });
-    setCurrentAchievement("");
-    setCurrentTextBlock("");
+    setCurrentEditTextBlock("");
   };
 
-  const addAchievement = () => {
-    if (currentAchievement.trim()) {
-      setNewProjectData((prev) => ({
-        ...prev,
-        achievements: [...prev.achievements, currentAchievement.trim()],
-      }));
-      setCurrentAchievement("");
-    }
-  };
-
-  const removeAchievement = (index: number) => {
-    setNewProjectData((prev) => ({
-      ...prev,
-      achievements: prev.achievements.filter((_, i) => i !== index),
-    }));
-  };
-
-  const addTextBlock = () => {
-    if (currentTextBlock.trim()) {
+  const addTextBlockToContentBlocks = () => {
+    if (currentEditTextBlock.trim()) {
       const newBlock: ContentBlock = {
-        id: `block-\${Date.now()}`,
+        id: `block-${Date.now()}`,
         type: "text",
-        content: currentTextBlock.trim(),
+        content: currentEditTextBlock.trim(),
       };
       setNewProjectData((prev) => ({
         ...prev,
         contentBlocks: [...prev.contentBlocks, newBlock],
       }));
-      setCurrentTextBlock("");
+      setCurrentEditTextBlock("");
     }
   };
 
-  const addImageBlock = (imageUrl: string) => {
-    if (imageUrl.trim()) {
+  const handleImageUploadForContentBlocks = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Sanitize the filename
+      const originalFilename = file.name;
+      const sanitizedFilename = originalFilename
+        .normalize("NFD")
+        .replace(/[^\w.-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      const filename = `${Date.now()}-${sanitizedFilename}`;
+      const { data, error } = await supabase.storage
+        .from('project-images')
+        .upload(filename, file);
+
+      if (error) {
+        console.error("Erro ao fazer upload da imagem para o Supabase:", error);
+        alert("Erro ao fazer upload da imagem. Por favor, tente novamente.");
+        return;
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from('project-images')
+        .getPublicUrl(data.path);
+
       const newBlock: ContentBlock = {
-        id: `block-\${Date.now()}`,
+        id: `block-${Date.now()}`,
         type: "image",
-        content: imageUrl.trim(),
+        content: publicUrlData.publicUrl,
       };
       setNewProjectData((prev) => ({
         ...prev,
@@ -258,37 +270,54 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
     }));
   };
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const imageUrl = e.target?.result as string;
-        addImageBlock(imageUrl);
-      };
-      reader.readAsDataURL(file);
+  const handleMainImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setNewProjectData((prev) => ({ ...prev, tempImageFile: event.target.files![0] }));
     }
   };
 
   const saveProject = async () => {
-    if (!selectedCompanyId || !newProjectData.title.trim()) return;
+    if (!newProjectData.title.trim()) return;
 
-    const newProject: Omit<Project, 'id'> = {
+    let imageUrl = "";
+    if (newProjectData.tempImageFile) {
+      const file = newProjectData.tempImageFile;
+      const originalFilename = file.name;
+      const sanitizedFilename = originalFilename
+        .normalize("NFD")
+        .replace(/[^\w.-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      const filename = `${Date.now()}-${sanitizedFilename}`;
+      const { data, error } = await supabase.storage
+        .from('project-images')
+        .upload(filename, file);
+
+      if (error) {
+        console.error("Erro ao fazer upload da imagem principal do projeto:", error);
+        alert("Erro ao fazer upload da imagem principal. Por favor, tente novamente.");
+        return;
+      }
+      const { data: publicUrlData } = supabase.storage
+        .from('project-images')
+        .getPublicUrl(data.path);
+      imageUrl = publicUrlData.publicUrl;
+    }
+
+    const projectToSave: Omit<Project, 'id'> = {
       title: newProjectData.title,
       description: newProjectData.description,
-      contentBlocks:
-        newProjectData.contentBlocks.length > 0
-          ? newProjectData.contentBlocks
-          : [],
+      contentBlocks: newProjectData.contentBlocks,
+      detailedContent: newProjectData.detailedContent,
       role: newProjectData.role,
       duration: newProjectData.duration,
-      achievements:
-        newProjectData.achievements.length > 0
-          ? newProjectData.achievements
-          : [],
+      // Adiciona a URL da imagem principal do projeto se houver
+      ...(imageUrl && { imageUrl: imageUrl }) as Partial<Project> // Usar Partial<Project> para adicionar imageUrl
     };
 
-    const { data, error } = await supabase.from('projects').insert([newProject]).select();
+    const { data, error } = await supabase.from('projects').insert([projectToSave]).select();
 
     if (error) {
       console.error("Erro ao salvar o projeto no Supabase:", error);
@@ -296,21 +325,14 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
       return;
     }
 
-    const savedProject = data[0]; // O Supabase retorna um array com o item inserido
+    const savedProject = data[0];
 
-    setCompaniesList((prev) =>
-      prev.map((company) =>
-        company.id === selectedCompanyId
-          ? { ...company, projects: [...company.projects, savedProject] }
-          : company,
-      ),
-    );
+    setProjectsList((prev) => [...prev, savedProject]); // Adiciona diretamente à lista de projetos
 
     closeModal();
   };
 
-  const deleteProject = async (companyId: string, projectId: string) => {
-    // Deletar do Supabase
+  const deleteProject = async (projectId: string) => {
     const { error } = await supabase.from('projects').delete().eq('id', projectId);
 
     if (error) {
@@ -319,17 +341,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
       return;
     }
 
-    // Atualizar o estado local
-    setCompaniesList((prev) =>
-      prev.map((company) =>
-        company.id === companyId
-          ? {
-              ...company,
-              projects: company.projects.filter((p) => p.id !== projectId),
-            }
-          : company,
-      ),
-    );
+    setProjectsList((prev) => prev.filter((p) => p.id !== projectId));
   };
 
   return (
@@ -338,25 +350,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
         {user && (
           <div className="flex justify-center mb-6">
             <Button
-              onClick={() => {
-                // Se não houver empresas, adicione uma empresa padrão temporária
-                if (companiesList.length === 0) {
-                  const newCompanyId = `company-${Date.now()}`;
-                  setCompaniesList([
-                    {
-                      id: newCompanyId,
-                      name: "Meus Projetos",
-                      period: "",
-                      description: "",
-                      projects: [],
-                    },
-                  ]);
-                  setSelectedCompanyId(newCompanyId);
-                } else {
-                  setSelectedCompanyId(companiesList[0].id); // Seleciona a primeira empresa existente
-                }
-                setIsModalOpen(true);
-              }}
+              onClick={openModal}
               className="flex items-center gap-2"
             >
               <Plus className="h-4 w-4" />
@@ -366,88 +360,78 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
         )}
 
         <div className="space-y-12">
-          {companiesList.length === 0 ? (
+          {projectsList.length === 0 ? (
             <p className="text-center text-muted-foreground">Nenhum projeto adicionado ainda. Clique em "Adicionar Projeto" para começar!</p>
           ) : (
-            companiesList.map((company) => (
-              <div key={company.id} className="space-y-6">
-                <div className="text-center space-y-2">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-center gap-2">
-                    <h3 className="text-2xl font-bold">{company.name}</h3>
-                    <span className="text-muted-foreground text-lg">
-                      {company.period}
-                    </span>
-                  </div>
-                  <p className="text-muted-foreground max-w-2xl mx-auto">
-                    {company.description}
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {company.projects.map((project) => {
-                    return (
-                      <Card
-                        key={project.id}
-                        className="overflow-hidden h-full flex flex-col"
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {projectsList.map((project) => {
+                const mainImage = (project as any).imageUrl; // Acessa a URL da imagem principal do projeto
+                return (
+                  <Card
+                    key={project.id}
+                    className="overflow-hidden h-full flex flex-col cursor-pointer transition-all hover:shadow-lg"
+                    onClick={() => navigate(`/project/${project.id}`)} // Torna o card clicável para ir para os detalhes
+                  >
+                    {mainImage && (
+                      <div className="relative w-full h-48 bg-muted overflow-hidden">
+                        <img
+                          src={mainImage}
+                          alt={project.title}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    )}
+                    <CardHeader>
+                      <CardTitle>{project.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex-grow">
+                      <div
+                        className="text-sm text-muted-foreground line-clamp-3"
+                        dangerouslySetInnerHTML={{ __html: project.description }}
+                      />
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
+                        <div className="flex items-center gap-1">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <span>{project.role}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span>{project.duration}</span>
+                        </div>
+                      </div>
+                    </CardContent>
+                    <CardFooter className="flex justify-end border-t bg-muted/20 pt-3">
+                      {user && (
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation(); // Evita que o click no botão ative o clique do card
+                            deleteProject(project.id!); // Garante que o ID não seja undefined
+                          }}
+                          className="text-xs flex items-center gap-1 mr-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Deletar
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation(); // Evita que o click no botão ative o clique do card
+                          navigate(`/project/${project.id}`);
+                        }}
+                        className="text-xs flex items-center gap-1"
                       >
-                        <CardHeader>
-                          <CardTitle>{project.title}</CardTitle>
-                        </CardHeader>
-                        <CardContent className="flex-grow">
-                          <div
-                            className="text-sm text-muted-foreground line-clamp-6"
-                            dangerouslySetInnerHTML={{ __html: project.description }}
-                          />
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-4 text-sm">
-                            <div className="flex items-center gap-1">
-                              <User className="h-4 w-4 text-muted-foreground" />
-                              <span>{project.role}</span>
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-4 w-4 text-muted-foreground" />
-                              <span>{project.duration}</span>
-                            </div>
-                          </div>
-
-                          {expandedProject === project.id && (
-                            <div className="mt-4 space-y-2">
-                              <h4 className="font-semibold text-sm mb-2">Principais Resultados</h4>
-                              <ul className="list-disc list-inside text-muted-foreground space-y-2">
-                                {project.achievements?.map(
-                                  (achievement, index) => (
-                                    <li key={index}>{achievement}</li>
-                                  ),
-                                )}
-                              </ul>
-                            </div>
-                          )}
-                        </CardContent>
-                        <CardFooter className="flex justify-end border-t bg-muted/20 pt-3">
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => deleteProject(company.id, project.id!)}
-                            className="text-xs flex items-center gap-1 mr-2"
-                          >
-                            <Trash2 className="h-3 w-3" />
-                            Deletar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => navigate(`/project/${project.id}`)}
-                            className="text-xs flex items-center gap-1"
-                          >
-                            <ExternalLink className="h-3 w-3" />
-                            Ver Detalhes
-                          </Button>
-                        </CardFooter>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            ))
+                        <ExternalLink className="h-3 w-3" />
+                        Ver Detalhes
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })}
+            </div>
           )}
         </div>
 
@@ -457,7 +441,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
             <DialogHeader>
               <DialogTitle>Adicionar Novo Projeto</DialogTitle>
               <DialogDescription>
-                Preencha os dados do novo projeto para a empresa selecionada.
+                Preencha os dados do novo projeto.
               </DialogDescription>
             </DialogHeader>
 
@@ -473,12 +457,28 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                       title: e.target.value,
                     }))
                   }
-                  placeholder="Ex: Sistema de CRM Empresarial"
+                  placeholder="Ex: Redesign de E-commerce"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="description">Descrição</Label>
+                <Label htmlFor="main-image">Imagem Principal do Projeto (para o card)</Label>
+                <Input
+                  id="main-image"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleMainImageUpload}
+                  ref={imageInputRef}
+                />
+                {newProjectData.tempImageFile && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Arquivo selecionado: {newProjectData.tempImageFile.name}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Descrição Breve</Label>
                 <ReactQuill
                   theme="snow"
                   value={newProjectData.description}
@@ -492,76 +492,99 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                 />
               </div>
 
-              {/* Content Blocks (Detailed Content) */}
+              {/* Detailed Content (Rich Text) */}
               <div className="space-y-2">
-                <Label>Conteúdo Detalhado (Texto e Imagens)</Label>
-                {newProjectData.contentBlocks.length > 0 && (
-                  <div className="space-y-2 mt-2">
-                    {newProjectData.contentBlocks.map((block, index) => (
-                      <div key={block.id || index} className="flex items-center justify-between bg-muted p-2 rounded text-sm">
+                <Label htmlFor="detailed-content">
+                  Conteúdo Detalhado do Projeto (Processo, Resultados, etc.)
+                </Label>
+                <ReactQuill
+                  theme="snow"
+                  value={newProjectData.detailedContent}
+                  onChange={(content) =>
+                    setNewProjectData((prev) => ({
+                      ...prev,
+                      detailedContent: content,
+                    }))
+                  }
+                  placeholder="Adicione o conteúdo detalhado do projeto, explicando o processo, desafios e soluções..."
+                  className="min-h-[200px]"
+                  modules={quillModulesForDetailedContent}
+                  formats={quillFormatsForDetailedContent}
+                />
+              </div>
+
+              {/* Content Blocks (Text and Images) */}
+              <div className="space-y-4">
+                <Label>Blocos de Conteúdo Adicionais (Imagens e Texto)</Label>
+                <div className="space-y-3">
+                  {newProjectData.contentBlocks.length > 0 ? (
+                    newProjectData.contentBlocks.map((block) => (
+                      <div
+                        key={block.id}
+                        className="flex items-center justify-between bg-muted p-3 rounded-md"
+                      >
                         {block.type === "text" ? (
-                          <span>{block.content}</span>
+                          <div
+                            className="flex-grow pr-4"
+                            dangerouslySetInnerHTML={{ __html: block.content }}
+                          />
                         ) : (
-                          <img src={block.content} alt="Content preview" className="h-12 w-12 object-cover rounded" />
+                          <img
+                            src={block.content}
+                            alt={block.caption || "Imagem do bloco"}
+                            className="h-16 w-16 object-cover rounded-md flex-shrink-0 mr-4"
+                          />
                         )}
-                        <button
-                          type="button"
+                        <Button
+                          variant="destructive"
+                          size="sm"
                           onClick={() => removeContentBlock(block.id)}
-                          className="text-muted-foreground hover:text-destructive flex-shrink-0"
                         >
-                          <X className="h-4 w-4" />
-                        </button>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  <ReactQuill
-                    theme="snow"
-                    value={currentTextBlock}
-                    onChange={setCurrentTextBlock}
-                    placeholder="Adicione um bloco de texto..."
-                    className="flex-grow"
-                    modules={quillModules}
-                    formats={quillFormats}
+                    ))
+                  ) : (
+                    <p className="text-sm text-muted-foreground">Nenhum bloco de conteúdo adicionado ainda.</p>
+                  )}
+                </div>
+
+                {/* Adicionar Novo Bloco de Texto */}
+                <div className="space-y-2 border-t pt-4">
+                  <Label htmlFor="new-text-block">Adicionar Novo Bloco de Texto</Label>
+                  <Textarea
+                    id="new-text-block"
+                    placeholder="Adicione um parágrafo, etapa do processo, etc."
+                    value={currentEditTextBlock}
+                    onChange={(e) => setCurrentEditTextBlock(e.target.value)}
+                    rows={3}
                   />
                   <Button
                     type="button"
                     size="sm"
-                    className="self-start"
-                    onClick={addTextBlock}
+                    onClick={addTextBlockToContentBlocks}
+                    disabled={!currentEditTextBlock.trim()}
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-4 w-4 mr-2" /> Adicionar Texto
                   </Button>
                 </div>
-              </div>
-              {/* Achievements (Principais Resultados) */}
-              <div className="space-y-2">
-                <Label>Principais Resultados</Label>
-                {newProjectData.achievements.length > 0 && (
-                  <div className="space-y-1 mt-2">
-                    {newProjectData.achievements.map((achievement, index) => (
-                      <div key={index} className="flex items-center justify-between bg-muted p-2 rounded text-sm">
-                        <span>{achievement}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeAchievement(index)}
-                          className="text-muted-foreground hover:text-destructive"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                <div className="flex gap-2">
+
+                {/* Adicionar Nova Imagem */}
+                <div className="space-y-2 border-t pt-4">
+                  <Label htmlFor="new-image-block">Adicionar Nova Imagem</Label>
                   <Input
-                    placeholder="Adicione um resultado..."
-                    value={currentAchievement}
-                    onChange={(e) => setCurrentAchievement(e.target.value)}
+                    id="image-upload-content-block"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUploadForContentBlocks}
+                    className="hidden"
+                    ref={contentBlockImageInputRef} // Usar a ref correta aqui
                   />
-                  <Button type="button" size="sm" onClick={addAchievement}>
-                    <Plus className="h-4 w-4" />
+                  <Button
+                    variant="outline"
+                    onClick={() => contentBlockImageInputRef.current?.click()}
+                  >
+                    <Upload className="h-4 w-4 inline-block mr-2" /> Carregar Imagem
                   </Button>
                 </div>
               </div>
@@ -579,7 +602,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                         role: e.target.value,
                       }))
                     }
-                    placeholder="Ex: Tech Lead, Desenvolvedor"
+                    placeholder="Ex: UI/UX Designer"
                   />
                 </div>
 
@@ -594,7 +617,7 @@ const ProjectShowcase: React.FC<ProjectShowcaseProps> = ({
                         duration: e.target.value,
                       }))
                     }
-                    placeholder="Ex: 6 meses, 1 ano"
+                    placeholder="Ex: 3 meses, 1 ano"
                   />
                 </div>
               </div>
