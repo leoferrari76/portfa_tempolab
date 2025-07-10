@@ -63,7 +63,7 @@ const Home = () => {
             Leo Ferrari
           </h1>
           <p className="text-xl md:text-5xl text-muted-foreground max-w-[700px] mb-8">
-            - Designer
+            Product Designer Lead
             </p>
             <p className="text-xl md:text-2xl text-muted-foreground max-w-[700px] mb-8">
             Criando experiências digitais que conectam pessoas e marcas através do design intencional e inovador.
