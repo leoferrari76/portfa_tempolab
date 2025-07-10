@@ -378,27 +378,12 @@ const ProjectDetail: React.FC = () => {
             )}
 
             {project.contentBlocks && project.contentBlocks.length > 0 && (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {/* Coluna de textos */}
-                <div className="space-y-6 md:col-span-2">
-                  {project.contentBlocks.filter(b => b.type === 'text').map(block => (
-                    <div key={block.id} className="prose max-w-none pr-4 bg-card rounded-lg border-0">
-                      <div dangerouslySetInnerHTML={{ __html: block.content }} />
-                    </div>
-                  ))}
-                </div>
-                {/* Coluna de imagens */}
-                <div className="space-y-6 md:col-span-1 flex flex-col items-center">
-                  {project.contentBlocks.filter(b => b.type === 'image').map(block => (
-                    <img
-                      key={block.id}
-                      src={block.content}
-                      alt={block.caption || 'Imagem do Projeto'}
-                      className="rounded-lg shadow-md object-cover w-full max-w-xs max-h-60 cursor-pointer mb-4 self-start"
-                      onClick={() => openImageModal(block.content)}
-                    />
-                  ))}
-                </div>
+              <div className="space-y-6">
+                {project.contentBlocks.filter(b => b.type === 'text').map(block => (
+                  <div key={block.id} className="prose max-w-none pr-4 bg-card rounded-lg border-0">
+                    <div dangerouslySetInnerHTML={{ __html: block.content }} />
+                  </div>
+                ))}
               </div>
             )}
           </section>
@@ -473,27 +458,19 @@ const ProjectDetail: React.FC = () => {
                 />
               </div>
 
-              {/* Content Blocks (Text and Images) */}
+              {/* Content Blocks (Text Only) */}
               <div className="space-y-4">
-                <Label>Blocos de Conteúdo Adicionais (Imagens e Texto)</Label>
+                <Label>Blocos de Conteúdo Adicionais (Apenas Texto)</Label>
                 <div className="space-y-3">
-                  {editProjectData.contentBlocks?.map((block) => (
+                  {editProjectData.contentBlocks?.filter(block => block.type === "text").map((block) => (
                     <div
                       key={block.id}
                       className="flex items-center justify-between bg-muted p-3 rounded-md"
                     >
-                      {block.type === "text" ? (
-                        <div
-                          className="flex-grow pr-4"
-                          dangerouslySetInnerHTML={{ __html: block.content }}
-                        />
-                      ) : (
-                        <img
-                          src={block.content}
-                          alt={block.caption || "Imagem do bloco"}
-                          className="h-16 w-16 object-cover rounded-md flex-shrink-0 mr-4"
-                        />
-                      )}
+                      <div
+                        className="flex-grow pr-4"
+                        dangerouslySetInnerHTML={{ __html: block.content }}
+                      />
                       <Button
                         variant="destructive"
                         size="sm"
@@ -522,25 +499,6 @@ const ProjectDetail: React.FC = () => {
                     disabled={!currentEditTextBlock.trim()}
                   >
                     <Plus className="h-4 w-4 mr-2" /> Adicionar Texto
-                  </Button>
-                </div>
-
-                {/* Adicionar Nova Imagem */}
-                <div className="space-y-2 border-t pt-4">
-                  <Label htmlFor="new-image-block">Adicionar Nova Imagem</Label>
-                  <Input
-                    id="image-upload-content-block"
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageUploadForContentBlocks}
-                    className="hidden"
-                    ref={imageInputRef}
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={() => imageInputRef.current?.click()}
-                  >
-                    <Upload className="h-4 w-4 inline-block mr-2" /> Carregar Imagem
                   </Button>
                 </div>
               </div>
