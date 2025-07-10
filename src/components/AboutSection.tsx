@@ -16,7 +16,7 @@ interface AboutSectionProps {
 const AboutSection = ({
   name = "Leonardo Ferrari",
   title = "UX Designer Sênior | Estratégia, operação e execução ponta-a-ponta",
-  bio = "Sou designer com mais de 10 anos de experiência em UX, atuando do início ao fim dos projetos — da imersão com stakeholders à entrega de soluções testadas e validadas. Tenho facilidade em traduzir contextos complexos em produtos claros, objetivos e centrados no usuário. Já atuei em segmentos como finanças, saúde, indústria farmacêutica e educação, sempre focando na clareza do processo, conexão com o negócio e valor real entregue.",
+  bio = "Sou designer com mais de 10 anos de experiência em UX, atuando de ponta a ponta nos projetos, desde a imersão com stakeholders até a entrega de soluções testadas, validadas e prontas para escalar.",
   skills = [
     "Figma",
     "FigJam",
@@ -54,6 +54,12 @@ const AboutSection = ({
             <div className="space-y-4">
               <h2 className="text-2xl font-semibold">Sobre mim</h2>
               <p className="text-muted-foreground leading-relaxed">{bio}</p>
+              <p className="text-muted-foreground leading-relaxed">
+              Tenho facilidade em traduzir contextos complexos em produtos claros, objetivos e centrados no usuário. Já atuei em segmentos como finanças, saúde, indústria farmacêutica, agronegócio e educação, sempre com foco em clareza de processos, conexão com o negócio e entrega de valor real.
+              </p>
+              <p className="text-muted-foreground leading-relaxed">
+                Hoje, além de atuar no desenvolvimento de produtos digitais, também colaboro com o time comercial em projetos de pré-venda, ajudando a construir propostas que mostram, de forma estratégica, como o design pode gerar impacto desde o início dos projetos.
+              </p>
               <p className="text-muted-foreground leading-relaxed">
                 Me destaco por facilitar decisões, organizar fluxos e formar
                 designers com visão de produto. Tenho investigado como IA e
