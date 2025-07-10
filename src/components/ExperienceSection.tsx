@@ -58,7 +58,7 @@ const experiences = [
   {
     company: "CI&T",
     logo: "public/janssen.png",
-    role: "CI&T/Projeto JanssenPro Latam",
+    role: "CI&T/Projeto JanssenPro",
     period: "2020-2022",
   },
   {
