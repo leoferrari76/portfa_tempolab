@@ -33,6 +33,7 @@ interface Project {
   detailedContent?: string; // Conteúdo principal em Rich Text, pode ser usado para uma introdução longa
   role: string;
   duration: string;
+  imageUrl?: string; // Novo campo para imagem principal do card
 }
 
 const ProjectDetail: React.FC = () => {
@@ -50,6 +51,8 @@ const ProjectDetail: React.FC = () => {
   const imageInputRef = React.useRef<HTMLInputElement>(null); // Referência para o input de arquivo de imagem
   const [showImageModal, setShowImageModal] = useState(false);
   const [currentImageSrc, setCurrentImageSrc] = useState("");
+  const [mainImageFile, setMainImageFile] = useState<File | null>(null); // Novo estado para upload
+  const mainImageInputRef = React.useRef<HTMLInputElement>(null); // Ref para input
 
   const quillModules = {
     toolbar: [
@@ -176,7 +179,9 @@ const ProjectDetail: React.FC = () => {
         detailedContent: project.detailedContent || "", // Inclui detailedContent
         role: project.role,
         duration: project.duration,
+        imageUrl: project.imageUrl || "",
       });
+      setMainImageFile(null); // Limpa arquivo ao abrir modal
       setIsEditModalOpen(true);
     }
   };
@@ -262,8 +267,39 @@ const ProjectDetail: React.FC = () => {
     }
   };
 
+  const handleMainImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      setMainImageFile(event.target.files[0]);
+    }
+  };
+
   const handleUpdateProject = async () => {
     if (!id || !editProjectData || !editProjectData.title.trim()) return;
+
+    let imageUrl = editProjectData.imageUrl || "";
+    if (mainImageFile) {
+      const file = mainImageFile;
+      const originalFilename = file.name;
+      const sanitizedFilename = originalFilename
+        .normalize("NFD")
+        .replace(/[^\w.-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      const filename = `${Date.now()}-${sanitizedFilename}`;
+      const { data, error } = await supabase.storage
+        .from('project-images')
+        .upload(filename, file);
+      if (error) {
+        console.error("Erro ao fazer upload da imagem principal do projeto:", error);
+        alert("Erro ao fazer upload da imagem principal. Por favor, tente novamente.");
+        return;
+      }
+      const { data: publicUrlData } = supabase.storage
+        .from('project-images')
+        .getPublicUrl(data.path);
+      imageUrl = publicUrlData.publicUrl;
+    }
 
     const projectToUpdate = {
       title: editProjectData.title,
@@ -272,6 +308,7 @@ const ProjectDetail: React.FC = () => {
       detailedContent: editProjectData.detailedContent,
       role: editProjectData.role,
       duration: editProjectData.duration,
+      imageUrl: imageUrl,
     };
 
     const { error } = await supabase
@@ -287,7 +324,7 @@ const ProjectDetail: React.FC = () => {
 
     alert("Projeto atualizado com sucesso!");
     closeEditModal();
-    fetchProject(); // Recarrega os dados para exibir as alterações
+    fetchProject();
   };
 
   if (loading) {
@@ -532,6 +569,29 @@ const ProjectDetail: React.FC = () => {
                     }
                   />
                 </div>
+              </div>
+
+              {/* Image Principal do Card */}
+              <div className="space-y-2">
+                <Label>Imagem Principal do Card</Label>
+                {editProjectData.imageUrl && (
+                  <img
+                    src={editProjectData.imageUrl}
+                    alt="Imagem atual do card"
+                    className="w-full max-w-xs h-32 object-cover rounded mb-2 border"
+                  />
+                )}
+                <Input
+                  type="file"
+                  accept="image/*"
+                  ref={mainImageInputRef}
+                  onChange={handleMainImageUpload}
+                />
+                {mainImageFile && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Arquivo selecionado: {mainImageFile.name}
+                  </p>
+                )}
               </div>
             </div>
           )}
