@@ -25,12 +25,6 @@ const Home = () => {
               Projetos
             </a>
 
-            <a
-              href="#contact"
-              className="text-sm font-medium hover:text-primary transition-colors"
-            >
-              Contato
-            </a>
           </nav>
           <button className="md:hidden">
             <svg
