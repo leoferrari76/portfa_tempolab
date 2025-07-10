@@ -45,7 +45,7 @@ const ProjectDetail: React.FC = () => {
   const [editProjectData, setEditProjectData] = useState<
     Omit<Project, "id"> | null
   >(null);
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [currentEditTextBlock, setCurrentEditTextBlock] = useState(""); // Novo estado para adicionar blocos de texto
   const [newImageBlockUrl, setNewImageBlockUrl] = useState(""); // Novo estado para a URL da imagem a ser adicionada
   const imageInputRef = React.useRef<HTMLInputElement>(null); // Referência para o input de arquivo de imagem
@@ -426,7 +426,8 @@ const ProjectDetail: React.FC = () => {
           </section>
         </div>
 
-        {user && (
+        {/* Botão de edição só aparece se não estiver carregando e houver usuário */}
+        {!authLoading && user && (
           <div className="flex justify-center mt-8">
             <Button onClick={openEditModal} className="flex items-center gap-2">
               <User className="h-4 w-4" />
