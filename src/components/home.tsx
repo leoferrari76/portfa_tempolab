@@ -4,8 +4,11 @@ import { Separator } from "./ui/separator";
 import AboutSection from "./AboutSection";
 import ProjectShowcase from "./ProjectShowcase";
 import ExperienceSection from "./ExperienceSection";
+import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabaseClient";
 
 const Home = () => {
+  const { user } = useAuth();
   return (
     <div className="min-h-screen bg-background">
       {/* Header with Navigation */}
@@ -24,26 +27,39 @@ const Home = () => {
             >
               Projetos
             </a>
-
           </nav>
-          <button className="md:hidden">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-menu"
-            >
-              <line x1="4" x2="20" y1="12" y2="12" />
-              <line x1="4" x2="20" y1="6" y2="6" />
-              <line x1="4" x2="20" y1="18" y2="18" />
-            </svg>
-          </button>
+          <div className="flex items-center gap-4">
+            <button className="md:hidden">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="lucide lucide-menu"
+              >
+                <line x1="4" x2="20" y1="12" y2="12" />
+                <line x1="4" x2="20" y1="6" y2="6" />
+                <line x1="4" x2="20" y1="18" y2="18" />
+              </svg>
+            </button>
+            {/* Botão de logout só aparece se estiver logado */}
+            {user && (
+              <button
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  window.location.reload();
+                }}
+                className="ml-2 px-4 py-2 rounded bg-primary text-primary-foreground hover:bg-primary/80 transition-colors text-sm font-medium"
+              >
+                Sair
+              </button>
+            )}
+          </div>
         </div>
       </header>
       <main className="container py-8 space-y-16">
