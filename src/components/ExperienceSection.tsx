@@ -87,7 +87,7 @@ const ExperienceSection: React.FC = () => {
               <img
                 src={exp.logo}
                 alt={exp.company}
-                className="h-16 w-auto grayscale group-hover:grayscale-0 transition duration-300 drop-shadow-md mb-2"
+                className="h-12 w-auto transition duration-300 mb-2"
                 title={exp.company}
               />
               <span className="text-xs text-muted-foreground font-medium text-center">{exp.period}</span>
