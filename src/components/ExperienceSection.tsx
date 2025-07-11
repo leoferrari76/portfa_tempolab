@@ -20,6 +20,12 @@ const experiences = [
     period: "2018-2020",
   },
   {
+    company: "LF",
+    logo: "/lf.png",
+    role: "Empresa LF Design",
+    period: "2008-2018",
+  },
+  {/*{
     company: "levva",
     logo: "/artesanal.png",
     role: "levva/Projeto Artesanal",
@@ -72,7 +78,7 @@ const experiences = [
     logo: "/next.png",
     role: "CI&T/Projeto Next",
     period: "2022",
-  },
+  },*/}
 
 ];
 
