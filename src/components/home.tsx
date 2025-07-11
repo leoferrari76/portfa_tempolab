@@ -81,9 +81,9 @@ const Home = () => {
           <p className="text-xl md:text-5xl text-muted-foreground max-w-[700px] mb-8">
             Product Designer Lead
             </p>
-            <p className="text-xl md:text-2xl text-muted-foreground max-w-[700px] mb-8">
-            Criando experiências digitais que conectam pessoas e marcas através do design intencional e inovador.
-          </p>
+            {/* <p className="text-xl md:text-2xl text-muted-foreground max-w-[700px] mb-8">
+            ncional e inovador.
+          </p> */}
         </motion.section>
 
         <Separator />
