@@ -86,7 +86,7 @@ const ExperienceSection: React.FC = () => {
   return (
     <section id="experience" className="py-12">
       <div className="container mx-auto px-4">
-        <h2 className="text-3xl font-bold tracking-tight mb-8">Empresas e Projetos</h2>
+        <h2 className="text-3xl font-bold tracking-tight mb-8">Por onde andei</h2>
         <div className="flex flex-wrap gap-12 justify-center items-center">
           {experiences.map((exp, idx) => (
             <div key={idx} className="flex flex-col items-center group">
